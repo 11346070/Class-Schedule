@@ -18,8 +18,13 @@
                 <li><a href="{% url 'index' %}" {% if request.path == '/' %}class="active"{% endif %}>首頁</a></li>
                 <li><a href="{% url 'course_list' %}" {% if 'courses' in request.path and 'my-courses' not in request.path %}class="active"{% endif %}>課程清單</a></li>
                 <li><a href="{% url 'my_courses' %}" {% if 'my-courses' in request.path %}class="active"{% endif %}>我的課表</a></li>
-                <li><a href="{% url 'system_info' %}" {% if 'system-info' in request.path %}class="active"{% endif %}>系統資訊</a></li>
+                <li><a href="{% url 'favorites' %}" {% if 'favorites' in request.path %}class="active"{% endif %}>收藏清單</a></li>
             </ul>
+            <button class="nav-toggle" aria-label="切換導覽選單">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </nav>
 

@@ -29,6 +29,7 @@ def index(request):
     user_id = get_user_id(request)
     enrolled_courses = course_store.get_user_enrollments(user_id)
     total_credits = course_store.get_user_total_credits(user_id)
+    credit_limit = course_store.get_user_credit_limit(user_id)
     
     # 建立每週課表（簡化版，直接給模板使用）
     weekly_schedule = []
@@ -53,11 +54,24 @@ def index(request):
             period_row['courses'].append(period_course)
         weekly_schedule.append(period_row)
     
+    # 計算空堂時間並格式化為列表
+    free_periods = course_store.get_free_periods(user_id)
+    free_periods_list = []
+    weekday_names = ['', '週一', '週二', '週三', '週四', '週五', '週六', '週日']
+    for weekday in range(1, 8):
+        free_periods_list.append({
+            'weekday': weekday,
+            'weekday_name': weekday_names[weekday],
+            'periods': free_periods.get(weekday, [])
+        })
+    
     context = {
         'enrolled_courses': enrolled_courses,
         'total_credits': total_credits,
+        'credit_limit': credit_limit,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
+        'free_periods_list': free_periods_list,
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
@@ -77,17 +91,24 @@ def course_list(request):
     keyword = request.GET.get('keyword', '').strip()
     course_type = request.GET.get('course_type', '').strip()
     weekday = int(request.GET.get('weekday', 0))
+    show_available = request.GET.get('show_available', '')
     
     # 搜尋課程
     courses = course_store.search_courses(keyword, course_type, weekday)
     
-    # 標記使用者已選的課程
+    # 篩選尚有名額的課程
+    if show_available:
+        courses = [c for c in courses if not c.is_full]
+    
+    # 標記使用者已選的課程和收藏的課程
     enrolled_course_ids = {c.course_id for c in course_store.get_user_enrollments(user_id)}
+    favorited_course_ids = {c.course_id for c in course_store.get_user_favorites(user_id)}
     
     courses_with_status = []
     for course in courses:
         course_dict = course.to_dict()
         course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
+        course_dict['is_favorited'] = course.course_id in favorited_course_ids
         courses_with_status.append(course_dict)
     
     context = {
@@ -95,6 +116,7 @@ def course_list(request):
         'keyword': keyword,
         'course_type': course_type,
         'weekday': weekday,
+        'show_available': show_available,
         'course_types': ['必修', '選修', '通識'],
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
@@ -111,6 +133,7 @@ def my_courses(request):
     user_id = get_user_id(request)
     enrolled_courses = course_store.get_user_enrollments(user_id)
     total_credits = course_store.get_user_total_credits(user_id)
+    credit_limit = course_store.get_user_credit_limit(user_id)
     
     # 按星期和節次排序
     enrolled_courses.sort(key=lambda c: (c.weekday, c.start_period))
@@ -120,6 +143,7 @@ def my_courses(request):
     context = {
         'courses': courses_dict,
         'total_credits': total_credits,
+        'credit_limit': credit_limit,
         'course_count': len(enrolled_courses),
     }
     
@@ -183,6 +207,7 @@ def course_detail(request, course_id):
         return redirect('course_list')
     
     is_enrolled = course_store.is_user_enrolled(user_id, course_id)
+    is_favorited = course_store.is_course_favorited(user_id, course_id)
     
     # 檢查是否有時間衝突
     conflict_course = None
@@ -197,32 +222,98 @@ def course_detail(request, course_id):
                     conflict_course = existing_course
                     break
     
+    # 選課前預檢
+    can_enroll, enroll_message = course_store.check_enrollment_eligibility(user_id, course_id)
+    
     course_dict = course.to_dict()
     
     context = {
         'course': course_dict,
         'is_enrolled': is_enrolled,
+        'is_favorited': is_favorited,
         'conflict_course': conflict_course.to_dict() if conflict_course else None,
+        'can_enroll': can_enroll,
+        'enroll_message': enroll_message,
     }
     
     return render(request, 'course_detail.html', context)
 
 
-@require_http_methods(["GET"])
-def system_info(request):
-    """系統資訊頁 - 顯示系統狀態及說明"""
-    total_courses = len(course_store.get_all_courses())
-    total_users = len(course_store.user_enrollments)
+@require_POST
+def add_favorite(request):
+    """收藏課程操作"""
+    user_id = get_user_id(request)
+    course_id = request.POST.get('course_id', '').strip()
     
-    # 統計各類型課程
-    course_types_count = {}
-    for course in course_store.get_all_courses():
-        course_types_count[course.course_type] = course_types_count.get(course.course_type, 0) + 1
+    if not course_id:
+        messages.error(request, '課程編號不得為空')
+        return redirect('course_list')
+    
+    # 執行收藏
+    success, message = course_store.add_favorite(user_id, course_id)
+    
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    
+    # 重導回來源頁面
+    next_url = request.POST.get('next', 'course_list')
+    return redirect(next_url)
+
+
+@require_POST
+def remove_favorite(request):
+    """取消收藏課程操作"""
+    user_id = get_user_id(request)
+    course_id = request.POST.get('course_id', '').strip()
+    
+    if not course_id:
+        messages.error(request, '課程編號不得為空')
+        return redirect('favorites')
+    
+    # 執行取消收藏
+    success, message = course_store.remove_favorite(user_id, course_id)
+    
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    
+    # 重導回來源頁面
+    next_url = request.POST.get('next', 'favorites')
+    return redirect(next_url)
+
+
+@require_http_methods(["GET"])
+def favorites(request):
+    """收藏清單頁"""
+    user_id = get_user_id(request)
+    favorited_courses = course_store.get_user_favorites(user_id)
+    
+    # 檢查每門課程的選課狀態及預檢結果
+    enrolled_course_ids = {c.course_id for c in course_store.get_user_enrollments(user_id)}
+    
+    courses_with_status = []
+    for course in favorited_courses:
+        course_dict = course.to_dict()
+        course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
+        
+        # 選課預檢
+        if not course_dict['is_enrolled']:
+            can_enroll, message = course_store.check_enrollment_eligibility(user_id, course.course_id)
+            course_dict['can_enroll'] = can_enroll
+            course_dict['enroll_message'] = message
+        else:
+            course_dict['can_enroll'] = False
+            course_dict['enroll_message'] = '已選修'
+        
+        courses_with_status.append(course_dict)
     
     context = {
-        'total_courses': total_courses,
-        'total_users': total_users,
-        'course_types_count': course_types_count,
+        'courses': courses_with_status,
+        'favorites_count': len(favorited_courses),
     }
     
-    return render(request, 'system_info.html', context)
+    return render(request, 'favorites.html', context)
+

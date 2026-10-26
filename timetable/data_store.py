@@ -8,9 +8,12 @@
 - 本專題採用單一 Django 程序執行
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 import threading
+
+# 學分上限設定（用於展示，非官方規定）
+DEFAULT_CREDIT_LIMIT = 25
 
 
 @dataclass
@@ -107,6 +110,12 @@ class CourseDataStore:
         
         # 使用者選課清單：user_id -> Set[course_id]
         self.user_enrollments: Dict[str, Set[str]] = {}
+        
+        # 使用者收藏清單：user_id -> Set[course_id]
+        self.user_favorites: Dict[str, Set[str]] = {}
+        
+        # 使用者學分上限：user_id -> int (預設使用 DEFAULT_CREDIT_LIMIT)
+        self.user_credit_limits: Dict[str, int] = {}
         
         # 執行緒鎖定（防止並發問題）
         self.lock = threading.Lock()
@@ -206,7 +215,49 @@ class CourseDataStore:
             return False
         return course_id in self.user_enrollments[user_id]
     
-    def enroll_course(self, user_id: str, course_id: str) -> tuple[bool, str]:
+    def get_user_credit_limit(self, user_id: str) -> int:
+        """取得使用者學分上限"""
+        return self.user_credit_limits.get(user_id, DEFAULT_CREDIT_LIMIT)
+    
+    def set_user_credit_limit(self, user_id: str, limit: int) -> bool:
+        """設定使用者學分上限"""
+        if limit <= 0:
+            return False
+        self.user_credit_limits[user_id] = limit
+        return True
+    
+    def check_enrollment_eligibility(self, user_id: str, course_id: str) -> Tuple[bool, str]:
+        """
+        選課前預檢，不占用名額
+        返回：(是否可以選課, 訊息)
+        """
+        # 檢查課程是否存在
+        course = self.get_course(course_id)
+        if not course:
+            return False, "課程不存在"
+        
+        # 檢查是否已選過
+        if self.is_user_enrolled(user_id, course_id):
+            return False, "您已經選過這門課程"
+        
+        # 檢查名額
+        if course.is_full:
+            return False, f"課程已額滿（{course.total_quota}/{course.total_quota}）"
+        
+        # 檢查時間衝突
+        conflict_course = self._check_time_conflict(user_id, course)
+        if conflict_course:
+            return False, f"時間衝突：與「{conflict_course.name}」（{conflict_course.get_time_display()}）衝堂"
+        
+        # 檢查學分上限
+        current_credits = self.get_user_total_credits(user_id)
+        credit_limit = self.get_user_credit_limit(user_id)
+        if current_credits + course.credits > credit_limit:
+            return False, f"超過學分上限：目前 {current_credits} 學分，選課後將達 {current_credits + course.credits} 學分，上限為 {credit_limit} 學分"
+        
+        return True, f"可以選課！選課後將有 {current_credits + course.credits} 學分"
+    
+    def enroll_course(self, user_id: str, course_id: str) -> Tuple[bool, str]:
         """
         選課
         返回：(是否成功, 訊息)
@@ -230,6 +281,12 @@ class CourseDataStore:
             if conflict_course:
                 return False, f"時間衝突：與「{conflict_course.name}」（{conflict_course.get_time_display()}）衝堂"
             
+            # 檢查學分上限
+            current_credits = self.get_user_total_credits(user_id)
+            credit_limit = self.get_user_credit_limit(user_id)
+            if current_credits + course.credits > credit_limit:
+                return False, f"超過學分上限：目前 {current_credits} 學分，上限為 {credit_limit} 學分"
+            
             # 選課成功
             if user_id not in self.user_enrollments:
                 self.user_enrollments[user_id] = set()
@@ -239,7 +296,7 @@ class CourseDataStore:
             
             return True, f"選課成功！剩餘名額：{course.remaining_quota}"
     
-    def drop_course(self, user_id: str, course_id: str) -> tuple[bool, str]:
+    def drop_course(self, user_id: str, course_id: str) -> Tuple[bool, str]:
         """
         退選課程
         返回：(是否成功, 訊息)
@@ -295,10 +352,91 @@ class CourseDataStore:
         enrolled_courses = self.get_user_enrollments(user_id)
         return sum(course.credits for course in enrolled_courses)
     
+    # === 課程收藏功能 ===
+    
+    def is_course_favorited(self, user_id: str, course_id: str) -> bool:
+        """檢查課程是否已收藏"""
+        if user_id not in self.user_favorites:
+            return False
+        return course_id in self.user_favorites[user_id]
+    
+    def add_favorite(self, user_id: str, course_id: str) -> Tuple[bool, str]:
+        """
+        收藏課程（不占用名額）
+        返回：(是否成功, 訊息)
+        """
+        with self.lock:
+            # 檢查課程是否存在
+            course = self.get_course(course_id)
+            if not course:
+                return False, "課程不存在"
+            
+            # 檢查是否已收藏
+            if self.is_course_favorited(user_id, course_id):
+                return False, "您已經收藏過這門課程"
+            
+            # 收藏成功
+            if user_id not in self.user_favorites:
+                self.user_favorites[user_id] = set()
+            
+            self.user_favorites[user_id].add(course_id)
+            return True, f"已收藏「{course.name}」"
+    
+    def remove_favorite(self, user_id: str, course_id: str) -> Tuple[bool, str]:
+        """
+        取消收藏課程
+        返回：(是否成功, 訊息)
+        """
+        with self.lock:
+            # 檢查課程是否存在
+            course = self.get_course(course_id)
+            if not course:
+                return False, "課程不存在"
+            
+            # 檢查是否已收藏
+            if not self.is_course_favorited(user_id, course_id):
+                return False, "您尚未收藏此課程"
+            
+            # 取消收藏成功
+            self.user_favorites[user_id].remove(course_id)
+            return True, f"已取消收藏「{course.name}」"
+    
+    def get_user_favorites(self, user_id: str) -> List[Course]:
+        """取得使用者收藏的課程"""
+        if user_id not in self.user_favorites:
+            return []
+        
+        course_ids = self.user_favorites[user_id]
+        return [self.courses[cid] for cid in course_ids if cid in self.courses]
+    
+    # === 空堂時間計算 ===
+    
+    def get_free_periods(self, user_id: str) -> Dict[int, List[int]]:
+        """
+        計算使用者的空堂節次
+        返回：{weekday: [free_periods]}
+        例如：{1: [1, 5, 6, 7], 2: [1, 2, 3, ...]}
+        """
+        enrolled_courses = self.get_user_enrollments(user_id)
+        
+        # 初始化所有節次為空堂（節次 1-13）
+        free_periods = {weekday: list(range(1, 14)) for weekday in range(1, 8)}
+        
+        # 移除已選課程的節次
+        for course in enrolled_courses:
+            weekday = course.weekday
+            for period in range(course.start_period, course.end_period + 1):
+                if period in free_periods[weekday]:
+                    free_periods[weekday].remove(period)
+        
+        return free_periods
+    
     def reset_all_data(self):
         """重置所有資料（用於測試或系統重置）"""
         with self.lock:
             self.user_enrollments.clear()
+            self.user_favorites.clear()
+            self.user_credit_limits.clear()
             for course in self.courses.values():
                 course.enrolled_count = 0
 

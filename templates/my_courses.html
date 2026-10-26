@@ -12,7 +12,7 @@
         </div>
         <div class="stat-item">
             <span class="stat-label">總學分</span>
-            <span class="stat-value">{{ total_credits }}</span>
+            <span class="stat-value">{{ total_credits }} / {{ credit_limit }}</span>
         </div>
     </div>
 </div>
@@ -58,10 +58,15 @@
         </table>
     </div>
     
-    <div class="summary-section">
-        <h3>學分統計</h3>
-        <p>總學分：<strong>{{ total_credits }}</strong></p>
+    <div class="summary-section" style="background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); margin-top: 2rem;">
+        <h3 style="margin-bottom: 1rem;">學分統計</h3>
+        <p>總學分：<strong>{{ total_credits }}</strong> / {{ credit_limit }}</p>
         <p>已選課程：<strong>{{ course_count }}</strong> 門</p>
+        {% if total_credits > credit_limit|floatformat:0|add:"-5" %}
+        <p style="color: var(--warning-color); margin-top: 0.5rem;">
+            ⚠️ 您已接近或超過學分上限
+        </p>
+        {% endif %}
     </div>
 </div>
 {% else %}

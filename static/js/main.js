@@ -3,6 +3,28 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('個人課表維護系統已載入');
     
+    // 導覽選單切換（行動版）
+    const navToggle = document.querySelector('.nav-toggle');
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (navToggle && navMenu) {
+        navToggle.addEventListener('click', function() {
+            navMenu.classList.toggle('active');
+            this.classList.toggle('active');
+        });
+        
+        // 點擊選單項目後關閉選單
+        const navLinks = navMenu.querySelectorAll('a');
+        navLinks.forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    navMenu.classList.remove('active');
+                    navToggle.classList.remove('active');
+                }
+            });
+        });
+    }
+    
     // 自動隱藏訊息提示
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(function(alert) {

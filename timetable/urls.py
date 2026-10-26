@@ -18,12 +18,18 @@ urlpatterns = [
     # 我的課表
     path('my-courses/', views.my_courses, name='my_courses'),
     
+    # 收藏清單
+    path('favorites/', views.favorites, name='favorites'),
+    
     # 選課操作
     path('enroll/', views.enroll_course, name='enroll_course'),
     
     # 退選操作
     path('drop/', views.drop_course, name='drop_course'),
     
-    # 系統資訊
-    path('system-info/', views.system_info, name='system_info'),
+    # 收藏操作
+    path('favorites/add/', views.add_favorite, name='add_favorite'),
+    
+    # 取消收藏操作
+    path('favorites/remove/', views.remove_favorite, name='remove_favorite'),
 ]

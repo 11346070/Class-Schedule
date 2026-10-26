@@ -35,6 +35,13 @@
                 </select>
             </div>
             <div class="form-group">
+                <label for="show_available">名額篩選</label>
+                <div style="display: flex; align-items: center; height: 38px;">
+                    <input type="checkbox" id="show_available" name="show_available" value="1" {% if show_available %}checked{% endif %} style="margin-right: 0.5rem;">
+                    <label for="show_available" style="margin: 0;">僅顯示尚有名額</label>
+                </div>
+            </div>
+            <div class="form-group">
                 <label>&nbsp;</label>
                 <button type="submit" class="btn btn-primary">搜尋</button>
                 <a href="{% url 'course_list' %}" class="btn btn-secondary">清除</a>
@@ -77,14 +84,15 @@
                         </span>
                     </td>
                     <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         {% if course.is_enrolled %}
-                        <span class="badge badge-success">已選課</span>
-                        <form method="post" action="{% url 'drop_course' %}" style="display: inline; margin-left: 5px;">
-                            {% csrf_token %}
-                            <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                            <input type="hidden" name="next" value="course_list">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
-                        </form>
+                            <span class="badge badge-success">已選課</span>
+                            <form method="post" action="{% url 'drop_course' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                                <input type="hidden" name="next" value="course_list">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
+                            </form>
                         {% else %}
                             {% if course.is_full %}
                             <button class="btn btn-secondary btn-sm" disabled>已額滿</button>
@@ -97,7 +105,25 @@
                             </form>
                             {% endif %}
                         {% endif %}
+                        
+                        {% if course.is_favorited %}
+                            <form method="post" action="{% url 'remove_favorite' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                                <input type="hidden" name="next" value="course_list">
+                                <button type="submit" class="btn btn-secondary btn-sm" title="取消收藏">★</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'add_favorite' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                                <input type="hidden" name="next" value="course_list">
+                                <button type="submit" class="btn btn-secondary btn-sm" title="收藏課程">☆</button>
+                            </form>
+                        {% endif %}
+                        
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
