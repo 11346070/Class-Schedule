@@ -17,6 +17,24 @@
     </div>
 </div>
 
+<!-- 課表合理性檢查 -->
+<div class="schedule-review">
+    <h2>課表合理性檢查</h2>
+    <ul class="health-list">
+        {% for item in schedule_review %}
+        <li class="health-item">
+            {% if item.ok %}
+            <span class="badge badge-success">正常</span>
+            {% else %}
+            <span class="badge badge-warning">注意</span>
+            {% endif %}
+            <strong>{{ item.name }}</strong>
+            <span>{{ item.message }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
 <!-- 每週課表 -->
 <div class="weekly-schedule">
     <h2>本週課程表</h2>

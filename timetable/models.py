@@ -2,9 +2,14 @@
 課程與選課相關資料模型（SQLite）
 """
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 DEFAULT_CREDIT_LIMIT = 25
+MIN_PERIOD = 1
+MAX_PERIOD = 13
+MIN_CREDITS = 1
+MAX_CREDITS = 6
 
 WEEKDAY_NAMES = {
     1: "週一", 2: "週二", 3: "週三",
@@ -39,6 +44,45 @@ class Course(models.Model):
     @property
     def is_full(self) -> bool:
         return self.enrolled_count >= self.total_quota
+
+    def clean(self):
+        """後台維護課程時，檢查星期、節次、學分與名額是否合理。"""
+        super().clean()
+        errors = {}
+
+        if self.weekday is not None and self.weekday not in WEEKDAY_NAMES:
+            errors["weekday"] = "星期必須介於 1（週一）到 7（週日）。"
+
+        for field_name in ("start_period", "end_period"):
+            value = getattr(self, field_name)
+            if value is not None and not (MIN_PERIOD <= value <= MAX_PERIOD):
+                errors[field_name] = f"節次必須介於 {MIN_PERIOD} 到 {MAX_PERIOD}。"
+
+        if (
+            self.start_period is not None
+            and self.end_period is not None
+            and "start_period" not in errors
+            and "end_period" not in errors
+            and self.start_period > self.end_period
+        ):
+            errors["end_period"] = "結束節次不可早於開始節次。"
+
+        if self.credits is not None and not (MIN_CREDITS <= self.credits <= MAX_CREDITS):
+            errors["credits"] = f"學分必須介於 {MIN_CREDITS} 到 {MAX_CREDITS}。"
+
+        if self.total_quota is not None and self.total_quota < 1:
+            errors["total_quota"] = "總名額必須大於 0。"
+        elif (
+            self.total_quota is not None
+            and self.enrolled_count is not None
+            and self.total_quota < self.enrolled_count
+        ):
+            errors["total_quota"] = (
+                f"總名額不可少於已選人數（目前已選 {self.enrolled_count} 人）。"
+            )
+
+        if errors:
+            raise ValidationError(errors)
 
     def get_weekday_name(self) -> str:
         return WEEKDAY_NAMES.get(self.weekday, "未知")

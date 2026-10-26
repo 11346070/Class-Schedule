@@ -23,6 +23,25 @@ def get_user_id(request):
     return request.session['user_id']
 
 
+def courses_with_enroll_status(user_id, courses, enrolled_course_ids):
+    """為清單上的每門課附上是否已選，以及選不了的原因。"""
+    courses_with_status = []
+    for course in courses:
+        course_dict = course.to_dict()
+        course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
+        if course_dict['is_enrolled']:
+            course_dict['can_enroll'] = False
+            course_dict['enroll_message'] = '已選修'
+        else:
+            can_enroll, message = course_store.check_enrollment_eligibility(
+                user_id, course.course_id
+            )
+            course_dict['can_enroll'] = can_enroll
+            course_dict['enroll_message'] = message
+        courses_with_status.append(course_dict)
+    return courses_with_status
+
+
 def redirect_after_action(request, default='course_list'):
     """
     依表單 next 參數重導向。
@@ -74,6 +93,7 @@ def index(request):
         'credit_limit': credit_limit,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
+        'schedule_review': course_store.review_schedule(user_id),
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
@@ -106,12 +126,11 @@ def course_list(request):
     enrolled_course_ids = {c.course_id for c in course_store.get_user_enrollments(user_id)}
     favorited_course_ids = {c.course_id for c in course_store.get_user_favorites(user_id)}
     
-    courses_with_status = []
-    for course in courses:
-        course_dict = course.to_dict()
-        course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
-        course_dict['is_favorited'] = course.course_id in favorited_course_ids
-        courses_with_status.append(course_dict)
+    courses_with_status = courses_with_enroll_status(
+        user_id, courses, enrolled_course_ids
+    )
+    for course_dict in courses_with_status:
+        course_dict['is_favorited'] = course_dict['course_id'] in favorited_course_ids
     
     context = {
         'courses': courses_with_status,
@@ -269,21 +288,9 @@ def favorites(request):
     # 檢查每門課程的選課狀態及預檢結果
     enrolled_course_ids = {c.course_id for c in course_store.get_user_enrollments(user_id)}
     
-    courses_with_status = []
-    for course in favorited_courses:
-        course_dict = course.to_dict()
-        course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
-        
-        # 選課預檢
-        if not course_dict['is_enrolled']:
-            can_enroll, message = course_store.check_enrollment_eligibility(user_id, course.course_id)
-            course_dict['can_enroll'] = can_enroll
-            course_dict['enroll_message'] = message
-        else:
-            course_dict['can_enroll'] = False
-            course_dict['enroll_message'] = '已選修'
-        
-        courses_with_status.append(course_dict)
+    courses_with_status = courses_with_enroll_status(
+        user_id, favorited_courses, enrolled_course_ids
+    )
     
     context = {
         'courses': courses_with_status,

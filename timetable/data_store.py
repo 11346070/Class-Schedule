@@ -17,7 +17,13 @@ from .models import (
     Favorite,
     UserCreditLimit,
     DEFAULT_CREDIT_LIMIT,
+    WEEKDAY_NAMES,
 )
+
+MIN_RECOMMENDED_CREDITS = 9
+MAX_CONSECUTIVE_PERIODS = 4
+MAX_DAILY_PERIODS = 6
+LUNCH_PERIODS = (4, 5)
 
 # 對外仍可引用
 __all__ = ["Course", "CourseDataStore", "course_store", "DEFAULT_CREDIT_LIMIT"]
@@ -308,6 +314,142 @@ class CourseDataStore:
     def get_user_favorites(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
         return list(Course.objects.filter(favorites__user_id=user_id))
+
+    def review_schedule(self, user_id: str) -> List[dict]:
+        """
+        檢查個人課表是否合理。
+        回傳項目含 name、ok、message。ok 為 False 表示需要注意。
+        空堂與學分組成只說明現況，不視為問題。
+        """
+        courses = self.get_user_enrollments(user_id)
+        total_credits = sum(course.credits for course in courses)
+        credit_limit = self.get_user_credit_limit(user_id)
+
+        by_type = {"必修": 0, "選修": 0, "通識": 0}
+        occupied = {day: set() for day in range(1, 8)}
+        for course in courses:
+            by_type[course.course_type] = by_type.get(course.course_type, 0) + course.credits
+            if course.weekday not in occupied:
+                continue
+            start = max(1, course.start_period)
+            end = min(13, course.end_period)
+            for period in range(start, end + 1):
+                occupied[course.weekday].add(period)
+
+        checks = []
+        if total_credits < MIN_RECOMMENDED_CREDITS:
+            if courses:
+                credit_message = (
+                    f"目前 {total_credits} 學分，低於建議的 {MIN_RECOMMENDED_CREDITS} 學分。"
+                )
+            else:
+                credit_message = f"尚未選課，建議至少選滿 {MIN_RECOMMENDED_CREDITS} 學分。"
+            checks.append({"name": "學分", "ok": False, "message": credit_message})
+        elif total_credits > credit_limit:
+            checks.append({
+                "name": "學分",
+                "ok": False,
+                "message": f"目前 {total_credits} 學分，已超過上限 {credit_limit} 學分。",
+            })
+        else:
+            checks.append({
+                "name": "學分",
+                "ok": True,
+                "message": f"目前 {total_credits} 學分，未超過上限 {credit_limit} 學分。",
+            })
+
+        composition = "、".join(
+            f"{name} {credits} 學分" for name, credits in by_type.items()
+        )
+        checks.append({"name": "學分組成", "ok": True, "message": composition})
+
+        gaps = []
+        long_runs = []
+        no_lunch = []
+        heavy_days = []
+        for day in range(1, 8):
+            periods = sorted(occupied[day])
+            day_name = WEEKDAY_NAMES[day]
+            if len(periods) >= 2:
+                for period in range(periods[0], periods[-1]):
+                    if period not in occupied[day]:
+                        gaps.append(f"{day_name}第 {period} 節")
+            if not periods:
+                continue
+
+            run = 1
+            best = 1
+            best_start = periods[0]
+            start = periods[0]
+            for index in range(1, len(periods)):
+                if periods[index] == periods[index - 1] + 1:
+                    run += 1
+                    if run > best:
+                        best = run
+                        best_start = start
+                else:
+                    run = 1
+                    start = periods[index]
+            if best > MAX_CONSECUTIVE_PERIODS:
+                best_end = best_start + best - 1
+                long_runs.append(
+                    f"{day_name}第 {best_start}–{best_end} 節（連續 {best} 節）"
+                )
+            if all(period in occupied[day] for period in LUNCH_PERIODS):
+                no_lunch.append(day_name)
+            if len(periods) > MAX_DAILY_PERIODS:
+                heavy_days.append(f"{day_name}共 {len(periods)} 節")
+
+        if gaps:
+            gap_message = "已選課程之間有空堂：" + "、".join(gaps) + "。"
+        elif courses:
+            gap_message = "已選課程之間沒有空堂。"
+        else:
+            gap_message = "尚未選課。"
+        checks.append({"name": "空堂", "ok": True, "message": gap_message})
+
+        if long_runs:
+            checks.append({
+                "name": "連續上課",
+                "ok": False,
+                "message": "同一天連續超過 "
+                f"{MAX_CONSECUTIVE_PERIODS} 節：" + "、".join(long_runs) + "。",
+            })
+        else:
+            checks.append({
+                "name": "連續上課",
+                "ok": True,
+                "message": f"沒有同一天連續超過 {MAX_CONSECUTIVE_PERIODS} 節的上課。",
+            })
+
+        if no_lunch:
+            checks.append({
+                "name": "午休",
+                "ok": False,
+                "message": "第 4–5 節都被課程佔滿：" + "、".join(no_lunch) + "。",
+            })
+        else:
+            checks.append({
+                "name": "午休",
+                "ok": True,
+                "message": "各上課日的第 4–5 節沒有同時被佔滿。",
+            })
+
+        if heavy_days:
+            checks.append({
+                "name": "單日負擔",
+                "ok": False,
+                "message": f"同一天超過 {MAX_DAILY_PERIODS} 節："
+                + "、".join(heavy_days) + "。",
+            })
+        else:
+            checks.append({
+                "name": "單日負擔",
+                "ok": True,
+                "message": f"沒有同一天超過 {MAX_DAILY_PERIODS} 節的上課。",
+            })
+
+        return checks
 
     def get_free_periods(self, user_id: str):
         """計算空堂節次（保留 API，目前首頁未使用）"""

@@ -93,15 +93,15 @@
                                 <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
                             </form>
                         {% else %}
-                            {% if course.is_full %}
-                            <button class="btn btn-secondary btn-sm" disabled>已額滿</button>
-                            {% else %}
+                            {% if course.can_enroll %}
                             <form method="post" action="{% url 'enroll_course' %}" style="display: inline;">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
                                 <input type="hidden" name="next" value="course_list">
                                 <button type="submit" class="btn btn-primary btn-sm">選課</button>
                             </form>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm" disabled>{% if course.is_full %}已額滿{% else %}無法選課{% endif %}</button>
                             {% endif %}
                         {% endif %}
                         
@@ -123,6 +123,13 @@
                         
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
                         </div>
+                        {% if not course.is_enrolled %}
+                            {% if course.can_enroll %}
+                            <small class="enroll-hint enroll-hint-ok">可選</small>
+                            {% else %}
+                            <small class="enroll-hint enroll-hint-warn">{{ course.enroll_message }}</small>
+                            {% endif %}
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

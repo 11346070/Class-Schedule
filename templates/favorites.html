@@ -46,8 +46,13 @@
                         <span class="badge badge-success">已選修</span>
                     {% elif course.can_enroll %}
                         <span class="badge badge-success">可選課</span>
+                    {% elif course.is_full %}
+                        <span class="badge badge-danger">已額滿</span>
                     {% else %}
-                        <span class="badge badge-danger">無法選課</span>
+                        <span class="badge badge-warning">無法選課</span>
+                    {% endif %}
+                    {% if not course.is_enrolled and not course.can_enroll %}
+                    <small class="enroll-hint enroll-hint-warn">{{ course.enroll_message }}</small>
                     {% endif %}
                 </td>
                 <td>
@@ -74,11 +79,6 @@
                         
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
                     </div>
-                    {% if not course.can_enroll and not course.is_enrolled %}
-                    <div style="margin-top: 0.25rem;">
-                        <small class="text-muted">{{ course.enroll_message }}</small>
-                    </div>
-                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
