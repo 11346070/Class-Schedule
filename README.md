@@ -197,10 +197,9 @@ Class-Schedule/
 ├── docs/                   # 文件
 │   ├── SYSTEM_ARCHITECTURE.md      # 系統架構文件
 │   ├── DEMO_SCRIPT.md              # 展示腳本
-│   ├── ACCEPTANCE_CHECKLIST.md     # 驗收清單
-│   └── 個人課表維護系統_期中報告.pptx  # 簡報
+│   └── ACCEPTANCE_CHECKLIST.md     # 驗收清單
 ├── scripts/                # 腳本
-│   └── generate_presentation.py    # 產生簡報
+│   └── generate_presentation.py    # 產生簡報（簡報已移至桌面）
 ├── start.bat               # Windows CMD 啟動腳本
 ├── start.ps1               # PowerShell 啟動腳本
 ├── requirements.txt        # Python 依賴
@@ -226,12 +225,12 @@ Class-Schedule/
 - 適合開發環境與課堂展示
 - 正式環境需考慮分散式鎖定或資料庫
 
-## 文件與簡報
+## 文件
 
 - **系統架構文件：** [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)
 - **展示腳本：** [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
 - **驗收清單：** [docs/ACCEPTANCE_CHECKLIST.md](docs/ACCEPTANCE_CHECKLIST.md)
-- **期中報告簡報：** [docs/個人課表維護系統_期中報告.pptx](docs/個人課表維護系統_期中報告.pptx)
+- **期中報告簡報：** `個人課表維護系統_期中報告.pptx`（已產生並放置於桌面）
 
 ## 安全性說明
 
@@ -250,7 +249,7 @@ Class-Schedule/
 ### 依賴套件
 - Django >= 5.0, < 5.1
 - python-decouple >= 3.8（環境變數管理）
-- python-pptx >= 0.6.23（簡報產生）
+- python-pptx >= 0.6.23（簡報產生工具，可選）
 
 ### 停止伺服器
 在終端機按 `Ctrl + C`

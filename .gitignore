@@ -23,6 +23,7 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
+sessions/
 
 # 測試相關（本專題不使用）
 .pytest_cache/
@@ -45,3 +46,6 @@ desktop.ini
 # 其他
 *.bak
 *.tmp
+
+# 簡報檔案（放在桌面，不納入版本控制）
+*.pptx
