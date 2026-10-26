@@ -93,7 +93,6 @@ def index(request):
         'credit_limit': credit_limit,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
-        'schedule_review': course_store.review_schedule(user_id),
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
