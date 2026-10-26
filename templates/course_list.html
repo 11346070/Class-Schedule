@@ -56,17 +56,6 @@
     {% if courses %}
     <div class="course-table-wrapper">
         <table class="course-table course-list-table">
-            <colgroup>
-                <col class="col-id">
-                <col class="col-name">
-                <col class="col-teacher">
-                <col class="col-time">
-                <col class="col-credits">
-                <col class="col-type">
-                <col class="col-quota">
-                <col class="col-status">
-                <col class="col-actions">
-            </colgroup>
             <thead>
                 <tr>
                     <th>課程編號</th>
@@ -131,14 +120,14 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
                                 <input type="hidden" name="next" value="course_list">
-                                <button type="submit" class="btn btn-secondary btn-sm" title="取消收藏">★</button>
+                                <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="取消收藏">★</button>
                             </form>
                         {% else %}
                             <form method="post" action="{% url 'add_favorite' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
                                 <input type="hidden" name="next" value="course_list">
-                                <button type="submit" class="btn btn-secondary btn-sm" title="收藏課程">☆</button>
+                                <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="收藏課程">☆</button>
                             </form>
                         {% endif %}
 

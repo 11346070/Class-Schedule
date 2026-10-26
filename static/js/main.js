@@ -9,11 +9,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (navToggle && navMenu) {
         // 切換選單
-        navToggle.addEventListener('click', function() {
+        function toggleNav(event) {
+            event.preventDefault();
+            event.stopPropagation();
             const isExpanded = navMenu.classList.toggle('active');
-            this.classList.toggle('active');
-            this.setAttribute('aria-expanded', isExpanded);
-        });
+            navToggle.classList.toggle('active', isExpanded);
+            navToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        }
+
+        navToggle.addEventListener('click', toggleNav);
         
         // 點擊選單項目後關閉選單
         const navLinks = navMenu.querySelectorAll('a');

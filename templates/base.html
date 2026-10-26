@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}個人課表維護系統{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261026e">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -14,12 +14,12 @@
             <div class="nav-brand">
                 <a href="{% url 'index' %}">📚 個人課表維護系統</a>
             </div>
-            <button class="nav-toggle" aria-label="切換導覽選單" aria-expanded="false">
+            <button type="button" class="nav-toggle" aria-label="切換導覽選單" aria-expanded="false" aria-controls="main-nav">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
-            <ul class="nav-menu">
+            <ul class="nav-menu" id="main-nav">
                 <li><a href="{% url 'index' %}" {% if request.path == '/' %}class="active"{% endif %}>首頁</a></li>
                 <li><a href="{% url 'course_list' %}" {% if 'courses' in request.path and 'my-courses' not in request.path %}class="active"{% endif %}>課程清單</a></li>
                 <li><a href="{% url 'favorites' %}" {% if 'favorites' in request.path %}class="active"{% endif %}>收藏清單</a></li>
@@ -55,7 +55,7 @@
         </div>
     </footer>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=20261026e"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
