@@ -28,7 +28,7 @@
 2. **個人課表維護**
    - 選課（新增課程至個人課表）
    - 退選（移除已選課程）
-   - 查看已選課程
+   - 在首頁查看已選課程與每週課表
    - 每週課表視覺化
    - 學分統計
 
@@ -71,8 +71,9 @@
 
 ### 前端技術
 - **Django Templates：** 伺服器端模板渲染，不採用前後端分離
-- **原生 CSS：** 不使用框架，完全客製化樣式
-- **原生 JavaScript：** 輕量化互動功能
+- **原生 CSS：** 不使用框架，完全客製化樣式，支援完整 RWD
+- **原生 JavaScript：** 輕量化互動功能，支援響應式導覽及鍵盤操作
+- **響應式設計：** 漢堡選單、Grid 佈局、無障礙功能
 
 ### 資料儲存
 - **記憶體儲存：** Python 字典與集合，不使用資料庫
@@ -119,23 +120,25 @@ graph TB
 ### Template（模板）
 使用 Django Templates 渲染 HTML：
 
-- **base.html：** 基礎模板，包含導航列與頁尾
-- **index.html：** 首頁，顯示每週課表
-- **course_list.html：** 課程清單與搜尋
+- **base.html：** 基礎模板，包含響應式導航列與頁尾
+- **index.html：** 首頁，顯示個人課表、每週課程表及學分統計
+- **course_list.html：** 課程清單與響應式篩選表單
 - **course_detail.html：** 課程詳細資訊
-- **my_courses.html：** 我的課表
+- **favorites.html：** 收藏清單
 - **system_info.html：** 系統資訊
+- **my_courses.html：**（已廢棄，功能整合至首頁）
 
 ### View（視圖）
 處理所有業務邏輯與請求：
 
-- **index：** 首頁與每週課表
-- **course_list：** 課程清單與搜尋
-- **course_detail：** 課程詳情
-- **my_courses：** 我的課表
+- **index：** 首頁、個人課表與每週課程表
+- **course_list：** 課程清單與搜尋篩選
+- **course_detail：** 課程詳情與選課預檢
+- **favorites：** 收藏清單
 - **enroll_course：** 選課操作（POST）
 - **drop_course：** 退選操作（POST）
-- **system_info：** 系統資訊
+- **add_favorite：** 收藏課程（POST）
+- **remove_favorite：** 取消收藏（POST）
 
 ### URL Routing
 - **專案層級：** `timetable_project/urls.py`
@@ -162,11 +165,12 @@ Class-Schedule/
 │   └── admin.py                # （未使用，無 Admin）
 │
 ├── templates/                  # HTML 模板
-│   ├── base.html               # 基礎模板
-│   ├── index.html              # 首頁
-│   ├── course_list.html        # 課程清單
+│   ├── base.html               # 基礎模板（含響應式導覽列）
+│   ├── index.html              # 首頁（含個人課表與學分統計）
+│   ├── course_list.html        # 課程清單（含響應式篩選表單）
 │   ├── course_detail.html      # 課程詳情
-│   ├── my_courses.html         # 我的課表
+│   ├── favorites.html          # 收藏清單
+│   ├── my_courses.html         #（已廢棄，功能整合至首頁）
 │   └── system_info.html        # 系統資訊
 │
 ├── static/                     # 靜態資源
@@ -304,13 +308,14 @@ def _periods_overlap(start1, end1, start2, end2):
 
 | URL | 名稱 | 方法 | 說明 |
 |-----|------|------|------|
-| `/` | index | GET | 首頁，顯示每週課表 |
-| `/courses/` | course_list | GET | 課程清單與搜尋 |
-| `/courses/<course_id>/` | course_detail | GET | 課程詳細資訊 |
-| `/my-courses/` | my_courses | GET | 我的課表 |
+| `/` | index | GET | 首頁，顯示個人課表與每週課程表 |
+| `/courses/` | course_list | GET | 課程清單與響應式搜尋篩選 |
+| `/courses/<course_id>/` | course_detail | GET | 課程詳細資訊與選課預檢 |
+| `/favorites/` | favorites | GET | 收藏清單 |
 | `/enroll/` | enroll_course | POST | 選課操作 |
 | `/drop/` | drop_course | POST | 退選操作 |
-| `/system-info/` | system_info | GET | 系統資訊 |
+| `/favorites/add/` | add_favorite | POST | 收藏課程 |
+| `/favorites/remove/` | remove_favorite | POST | 取消收藏 |
 
 ## 十一、重要業務邏輯說明
 
@@ -470,12 +475,12 @@ http://127.0.0.1:8000
    - 選課成功後更新課表
 
 3. **查看課表**
-   - 在首頁查看每週課表
-   - 在我的課表查看詳細列表
+   - 在首頁查看個人課表與每週課程表
+   - 查看已選課程詳細資訊與學分統計
 
 4. **退選**
-   - 在我的課表或首頁點擊「退選」
-   - 確認後釋放名額
+   - 在首頁點擊「退選」
+   - 確認後釋放名額並更新課表
 
 5. **查看課程詳情**
    - 點擊課程名稱或「詳情」按鈕
@@ -554,6 +559,13 @@ http://127.0.0.1:8000
 
 ---
 
-**文件版本：** 1.0  
+**文件版本：** 1.1  
 **最後更新：** 2026-10-26  
+**變更記錄：**
+- 移除「我的課表」獨立頁面，功能整合至首頁
+- 移除「本週空堂時間」功能
+- 新增響應式漢堡選單與無障礙功能
+- 優化課程清單篩選表單 RWD
+- 更新 URL 路由與頁面架構說明
+
 **作者：** 個人課表維護系統開發團隊

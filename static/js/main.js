@@ -8,9 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const navMenu = document.querySelector('.nav-menu');
     
     if (navToggle && navMenu) {
+        // 切換選單
         navToggle.addEventListener('click', function() {
-            navMenu.classList.toggle('active');
+            const isExpanded = navMenu.classList.toggle('active');
             this.classList.toggle('active');
+            this.setAttribute('aria-expanded', isExpanded);
         });
         
         // 點擊選單項目後關閉選單
@@ -20,8 +22,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (window.innerWidth <= 768) {
                     navMenu.classList.remove('active');
                     navToggle.classList.remove('active');
+                    navToggle.setAttribute('aria-expanded', 'false');
                 }
             });
+        });
+        
+        // Escape 鍵關閉選單
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && navMenu.classList.contains('active')) {
+                navMenu.classList.remove('active');
+                navToggle.classList.remove('active');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.focus();
+            }
+        });
+        
+        // 視窗大小改變時重置選單狀態
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                navMenu.classList.remove('active');
+                navToggle.classList.remove('active');
+                navToggle.setAttribute('aria-expanded', 'false');
+            }
         });
     }
     

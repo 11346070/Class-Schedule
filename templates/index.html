@@ -92,35 +92,6 @@
 </div>
 {% endif %}
 
-<!-- 快速動作 -->
-<div class="quick-actions">
-    <a href="{% url 'course_list' %}" class="btn btn-primary btn-lg">瀏覽課程清單</a>
-    <a href="{% url 'my_courses' %}" class="btn btn-secondary btn-lg">管理我的課表</a>
-    <a href="{% url 'favorites' %}" class="btn btn-secondary btn-lg">查看收藏清單</a>
-</div>
-
-<!-- 空堂時間 -->
-{% if enrolled_courses %}
-<div class="free-periods-section" style="margin-top: 3rem;">
-    <h2>本週空堂時間</h2>
-    <div class="free-periods-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
-        {% for day_info in free_periods_list %}
-        <div class="free-period-card" style="background: white; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-            <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--primary-color);">{{ day_info.weekday_name }}</h3>
-            {% if day_info.periods %}
-            <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.8;">
-                {% for period in day_info.periods %}
-                    <span class="badge badge-success" style="margin: 0.125rem;">第{{ period }}節</span>
-                {% endfor %}
-            </p>
-            {% else %}
-            <p style="font-size: 0.875rem; color: var(--text-muted);">全天排滿</p>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}

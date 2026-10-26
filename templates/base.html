@@ -14,17 +14,16 @@
             <div class="nav-brand">
                 <a href="{% url 'index' %}">📚 個人課表維護系統</a>
             </div>
-            <ul class="nav-menu">
-                <li><a href="{% url 'index' %}" {% if request.path == '/' %}class="active"{% endif %}>首頁</a></li>
-                <li><a href="{% url 'course_list' %}" {% if 'courses' in request.path and 'my-courses' not in request.path %}class="active"{% endif %}>課程清單</a></li>
-                <li><a href="{% url 'my_courses' %}" {% if 'my-courses' in request.path %}class="active"{% endif %}>我的課表</a></li>
-                <li><a href="{% url 'favorites' %}" {% if 'favorites' in request.path %}class="active"{% endif %}>收藏清單</a></li>
-            </ul>
-            <button class="nav-toggle" aria-label="切換導覽選單">
+            <button class="nav-toggle" aria-label="切換導覽選單" aria-expanded="false">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
+            <ul class="nav-menu">
+                <li><a href="{% url 'index' %}" {% if request.path == '/' %}class="active"{% endif %}>首頁</a></li>
+                <li><a href="{% url 'course_list' %}" {% if 'courses' in request.path and 'my-courses' not in request.path %}class="active"{% endif %}>課程清單</a></li>
+                <li><a href="{% url 'favorites' %}" {% if 'favorites' in request.path %}class="active"{% endif %}>收藏清單</a></li>
+            </ul>
         </div>
     </nav>
 

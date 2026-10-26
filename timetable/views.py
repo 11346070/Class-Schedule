@@ -54,24 +54,12 @@ def index(request):
             period_row['courses'].append(period_course)
         weekly_schedule.append(period_row)
     
-    # 計算空堂時間並格式化為列表
-    free_periods = course_store.get_free_periods(user_id)
-    free_periods_list = []
-    weekday_names = ['', '週一', '週二', '週三', '週四', '週五', '週六', '週日']
-    for weekday in range(1, 8):
-        free_periods_list.append({
-            'weekday': weekday,
-            'weekday_name': weekday_names[weekday],
-            'periods': free_periods.get(weekday, [])
-        })
-    
     context = {
         'enrolled_courses': enrolled_courses,
         'total_credits': total_credits,
         'credit_limit': credit_limit,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
-        'free_periods_list': free_periods_list,
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
@@ -127,29 +115,6 @@ def course_list(request):
     return render(request, 'course_list.html', context)
 
 
-@require_http_methods(["GET"])
-def my_courses(request):
-    """我的課表頁 - 顯示已選課程"""
-    user_id = get_user_id(request)
-    enrolled_courses = course_store.get_user_enrollments(user_id)
-    total_credits = course_store.get_user_total_credits(user_id)
-    credit_limit = course_store.get_user_credit_limit(user_id)
-    
-    # 按星期和節次排序
-    enrolled_courses.sort(key=lambda c: (c.weekday, c.start_period))
-    
-    courses_dict = [course.to_dict() for course in enrolled_courses]
-    
-    context = {
-        'courses': courses_dict,
-        'total_credits': total_credits,
-        'credit_limit': credit_limit,
-        'course_count': len(enrolled_courses),
-    }
-    
-    return render(request, 'my_courses.html', context)
-
-
 @require_POST
 def enroll_course(request):
     """選課操作"""
@@ -181,7 +146,7 @@ def drop_course(request):
     
     if not course_id:
         messages.error(request, '課程編號不得為空')
-        return redirect('my_courses')
+        return redirect('index')
     
     # 執行退選
     success, message = course_store.drop_course(user_id, course_id)
@@ -191,8 +156,8 @@ def drop_course(request):
     else:
         messages.error(request, message)
     
-    # 重導回我的課表或來源頁面
-    next_url = request.POST.get('next', 'my_courses')
+    # 重導回首頁或來源頁面
+    next_url = request.POST.get('next', 'index')
     return redirect(next_url)
 
 

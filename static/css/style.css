@@ -51,6 +51,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.nav-brand {
+    flex: 0 0 auto;
 }
 
 .nav-brand a {
@@ -58,12 +63,16 @@ body {
     font-weight: bold;
     color: var(--primary-color);
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .nav-menu {
     display: flex;
     list-style: none;
     gap: 2rem;
+    margin: 0;
 }
 
 .nav-menu a {
@@ -428,13 +437,15 @@ body {
 }
 
 .search-form .form-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     align-items: flex-end;
 }
 
 .form-group {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .form-group label {
@@ -456,6 +467,19 @@ body {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* 關鍵字搜尋欄位佔滿整行 */
+.form-group.keyword-field {
+    grid-column: 1 / -1;
+}
+
+/* 按鈕組 */
+.form-group.button-group {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: flex-end;
 }
 
 /* === 詳細資訊 === */
@@ -565,14 +589,28 @@ body {
     border: none;
     cursor: pointer;
     padding: 0.5rem;
+    gap: 4px;
+    z-index: 101;
 }
 
 .nav-toggle span {
     width: 25px;
     height: 3px;
     background-color: var(--primary-color);
-    margin: 3px 0;
-    transition: 0.3s;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.nav-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.nav-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
 }
 
 /* === 響應式設計 === */
@@ -597,12 +635,15 @@ body {
 @media (max-width: 768px) {
     /* 導覽列 */
     .navbar .container {
-        flex-wrap: wrap;
+        position: relative;
+    }
+    
+    .nav-brand {
+        flex: 1;
     }
     
     .nav-toggle {
         display: flex;
-        order: 3;
     }
     
     .nav-menu {
@@ -611,7 +652,9 @@ body {
         flex-direction: column;
         gap: 0;
         margin-top: 1rem;
-        order: 4;
+        background-color: #fff;
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
     .nav-menu.active {
@@ -619,9 +662,13 @@ body {
     }
     
     .nav-menu a {
-        padding: 0.75rem 1rem;
+        padding: 0.875rem 1rem;
         border-radius: 0;
         border-bottom: 1px solid var(--border-color);
+    }
+    
+    .nav-menu li:last-child a {
+        border-bottom: none;
     }
     
     /* 主要內容 */
@@ -646,7 +693,21 @@ body {
     
     /* 搜尋表單 */
     .search-form .form-row {
-        flex-direction: column;
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .form-group.keyword-field {
+        grid-column: 1 / -1;
+    }
+    
+    .form-group.button-group {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+    
+    .form-group.button-group .btn {
+        flex: 0 0 auto;
+        min-width: 100px;
     }
     
     /* 課程卡片 */
@@ -788,6 +849,27 @@ body {
     /* 搜尋表單 */
     .search-filter-section {
         padding: 1rem;
+    }
+    
+    .search-form .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.875rem;
+    }
+    
+    .form-group.keyword-field,
+    .form-group.button-group {
+        grid-column: 1;
+    }
+    
+    .form-group.button-group {
+        flex-direction: row;
+        justify-content: stretch;
+        gap: 0.5rem;
+    }
+    
+    .form-group.button-group .btn {
+        flex: 1;
+        min-width: 0;
     }
     
     .form-group label {
