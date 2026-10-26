@@ -7,8 +7,8 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 本系統是一套適合大學生使用的個人課表維護系統，讓使用者能夠瀏覽課程、選課、退選、維護個人課表，並即時檢查課程衝突與課程名額。系統特別注重選課規則及名額管理，確保選課流程的合理性與正確性。
 
 **重要特色：**
-- ✅ 不使用任何資料庫（SQLite、MySQL、PostgreSQL）
-- ✅ 採用記憶體儲存，所有資料存儲於 Python 記憶體中
+- ✅ 使用 SQLite 持久化課程、選課與收藏資料
+- ✅ 伺服器重啟後資料仍會保留
 - ✅ 完整的課程時間衝突檢查
 - ✅ 精確的課程名額管理與占用
 - ✅ 繁體中文介面
@@ -76,11 +76,11 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 ## 技術架構
 
 ### 後端
-- **框架：** Django 5.x
+- **框架：** Django 5.x / 6.x
 - **語言：** Python 3.12
-- **資料儲存：** 記憶體儲存（無資料庫）
+- **資料庫：** SQLite（Django ORM）
 - **Session：** 檔案式 Session
-- **並發控制：** threading.Lock
+- **並發控制：** threading.Lock + 資料庫交易
 
 ### 前端
 - **模板引擎：** Django Templates
@@ -91,7 +91,7 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 
 ### 架構特點
 - Django MTV 架構
-- 單例模式課程資料儲存
+- SQLite 儲存課程／選課／收藏
 - Session 識別使用者
 - CSRF 防護
 - 表單伺服器端驗證
@@ -142,7 +142,14 @@ copy .env.example .env
 
 （可選）編輯 `.env` 並設定新的 SECRET_KEY
 
-6. **執行系統檢查**
+6. **建立資料庫並遷移**
+```powershell
+python manage.py migrate
+```
+
+首次啟動且資料庫尚無課程時，系統會自動載入示範課程。
+
+7. **執行系統檢查**
 ```powershell
 python manage.py check
 ```
@@ -187,12 +194,14 @@ http://127.0.0.1:8000
 ```
 Class-Schedule/
 ├── timetable_project/      # Django 專案設定
-│   ├── settings.py         # 設定檔（無資料庫、檔案式 Session）
+│   ├── settings.py         # 設定檔（SQLite、檔案式 Session）
 │   └── urls.py             # 主 URL routing
 ├── timetable/              # 主要應用程式
-│   ├── data_store.py       # 課程資料儲存與管理（記憶體）
+│   ├── models.py           # Course / Enrollment / Favorite 等模型
+│   ├── data_store.py       # 選課業務邏輯（SQLite ORM）
 │   ├── views.py            # 視圖處理
-│   └── urls.py             # App URL routing
+│   ├── urls.py             # App URL routing
+│   └── migrations/         # 資料庫遷移
 ├── templates/              # HTML 模板
 │   ├── base.html           # 基礎模板（含響應式導覽列）
 │   ├── index.html          # 首頁（含個人課表與學分統計）
@@ -205,6 +214,7 @@ Class-Schedule/
 │   ├── css/style.css       # 樣式表（完整 RWD）
 │   └── js/main.js          # JavaScript
 ├── sessions/               # Session 檔案儲存（自動產生）
+├── db.sqlite3              # SQLite 資料庫（本機產生，不納入版本控制）
 ├── .venv/                  # Python 虛擬環境（不納入版本控制）
 ├── manage.py               # Django 管理工具
 ├── requirements.txt        # Python 依賴
@@ -214,12 +224,12 @@ Class-Schedule/
 └── README.md               # 專案說明
 ```
 
-## 重要限制
+## 重要說明
 
-### 資料儲存限制
-- **伺服器重啟後資料重置：** 所有選課資料會回到初始狀態
-- **無法跨程序共用：** 多個 Worker 或程序無法共用記憶體
-- **單程序執行：** 本專題採用單一 Django 程序確保名額正確
+### 資料儲存
+- 使用 SQLite（`db.sqlite3`）儲存課程、選課與收藏
+- 伺服器重啟後資料仍會保留
+- `db.sqlite3` 不納入版本控制，clone 後請執行 `python manage.py migrate`
 
 ### 使用者識別
 - 使用 Django Session 識別使用者
@@ -227,9 +237,8 @@ Class-Schedule/
 - Session 儲存於檔案（sessions/ 目錄）
 
 ### 並發處理
-- 使用 threading.Lock 防止並發選課問題
+- 選課／退選使用資料庫交易與鎖定
 - 適合開發環境與課堂展示
-- 正式環境需考慮分散式鎖定或資料庫
 
 ## 安全性說明
 
@@ -253,7 +262,7 @@ Class-Schedule/
 在終端機按 `Ctrl + C`
 
 ### 重置資料
-重新啟動伺服器即可重置所有選課資料
+刪除 `db.sqlite3` 後重新執行 `python manage.py migrate`，再啟動伺服器即可重新載入示範課程。
 
 ## 授權與聲明
 

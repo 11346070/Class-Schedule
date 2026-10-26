@@ -33,7 +33,6 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 # Application definition
 
 INSTALLED_APPS = [
-    # Django 內建（移除需要資料庫的 admin, auth, contenttypes）
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -70,10 +69,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'timetable_project.wsgi.application'
 
 
-# Database
-# 本專題不使用資料庫，設定為空字典以避免 Django 嘗試連線
-# 移除所有資料庫相關的 Django app（admin, auth, contenttypes）
-DATABASES = {}
+# Database - SQLite（課程、選課、收藏持久化）
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 
 # Password validation（不使用 Django Auth，此設定無效但保留以避免錯誤）
