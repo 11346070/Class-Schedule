@@ -23,6 +23,20 @@ def get_user_id(request):
     return request.session['user_id']
 
 
+def redirect_after_action(request, default='course_list'):
+    """
+    依表單 next 參數重導向。
+    course_detail 需帶 course_id，其餘可為 URL 名稱或路徑。
+    """
+    next_url = request.POST.get('next', default)
+    course_id = request.POST.get('course_id', '').strip()
+
+    if next_url == 'course_detail' and course_id:
+        return redirect('course_detail', course_id=course_id)
+
+    return redirect(next_url)
+
+
 @require_http_methods(["GET"])
 def index(request):
     """首頁 - 顯示課表總覽"""
@@ -134,8 +148,7 @@ def enroll_course(request):
         messages.error(request, message)
     
     # 重導回課程清單或來源頁面
-    next_url = request.POST.get('next', 'course_list')
-    return redirect(next_url)
+    return redirect_after_action(request, default='course_list')
 
 
 @require_POST
@@ -157,8 +170,7 @@ def drop_course(request):
         messages.error(request, message)
     
     # 重導回首頁或來源頁面
-    next_url = request.POST.get('next', 'index')
-    return redirect(next_url)
+    return redirect_after_action(request, default='index')
 
 
 @require_http_methods(["GET"])
@@ -223,8 +235,7 @@ def add_favorite(request):
         messages.error(request, message)
     
     # 重導回來源頁面
-    next_url = request.POST.get('next', 'course_list')
-    return redirect(next_url)
+    return redirect_after_action(request, default='course_list')
 
 
 @require_POST
@@ -246,8 +257,7 @@ def remove_favorite(request):
         messages.error(request, message)
     
     # 重導回來源頁面
-    next_url = request.POST.get('next', 'favorites')
-    return redirect(next_url)
+    return redirect_after_action(request, default='favorites')
 
 
 @require_http_methods(["GET"])

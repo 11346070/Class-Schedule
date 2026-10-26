@@ -501,6 +501,29 @@ body {
     font-size: 1.5rem;
 }
 
+/* 課程詳情操作區：無白色外框，按鈕橫向並排、寬度依文字自適應 */
+.detail-actions {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.detail-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.detail-action-buttons form {
+    display: inline;
+    margin: 0;
+}
+
+.detail-action-buttons .btn {
+    width: auto;
+}
+
 .detail-table {
     width: 100%;
 }

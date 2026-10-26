@@ -149,20 +149,6 @@ python manage.py check
 
 ### 啟動系統
 
-#### 方式一：使用啟動腳本（推薦）
-
-**PowerShell：**
-```powershell
-.\start.ps1
-```
-
-**CMD：**
-```cmd
-start.bat
-```
-
-#### 方式二：手動啟動
-
 ```powershell
 python manage.py runserver 127.0.0.1:8000
 ```
@@ -211,22 +197,16 @@ Class-Schedule/
 │   ├── base.html           # 基礎模板（含響應式導覽列）
 │   ├── index.html          # 首頁（含個人課表與學分統計）
 │   ├── course_list.html    # 課程清單（含響應式篩選表單）
-│   ├── course_detail.html  # 課程詳情
+│   ├── course_detail.html  # 課程詳情（選課／退選／收藏橫向按鈕）
 │   ├── my_courses.html     # （已廢棄，功能整合至首頁）
 │   ├── favorites.html      # 收藏清單
 │   └── system_info.html    # 系統資訊
 ├── static/                 # 靜態資源
 │   ├── css/style.css       # 樣式表（完整 RWD）
 │   └── js/main.js          # JavaScript
-├── docs/                   # 文件
-│   ├── SYSTEM_ARCHITECTURE.md      # 系統架構文件
-│   ├── DEMO_SCRIPT.md              # 展示腳本
-│   └── ACCEPTANCE_CHECKLIST.md     # 驗收清單
 ├── sessions/               # Session 檔案儲存（自動產生）
 ├── .venv/                  # Python 虛擬環境（不納入版本控制）
 ├── manage.py               # Django 管理工具
-├── start.bat               # Windows CMD 啟動腳本
-├── start.ps1               # PowerShell 啟動腳本
 ├── requirements.txt        # Python 依賴
 ├── .env                    # 環境變數（不納入版本控制）
 ├── .env.example            # 環境變數範例
@@ -250,12 +230,6 @@ Class-Schedule/
 - 使用 threading.Lock 防止並發選課問題
 - 適合開發環境與課堂展示
 - 正式環境需考慮分散式鎖定或資料庫
-
-## 文件
-
-- **系統架構文件：** [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)
-- **展示腳本：** [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
-- **驗收清單：** [docs/ACCEPTANCE_CHECKLIST.md](docs/ACCEPTANCE_CHECKLIST.md)
 
 ## 安全性說明
 

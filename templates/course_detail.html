@@ -55,17 +55,11 @@
     </div>
 
     <!-- 選課狀態與操作 -->
-    <div class="action-card">
+    <div class="detail-actions">
         {% if is_enrolled %}
         <div class="alert alert-success">
             ✓ 您已選修此課程
         </div>
-        <form method="post" action="{% url 'drop_course' %}">
-            {% csrf_token %}
-            <input type="hidden" name="course_id" value="{{ course.course_id }}">
-            <input type="hidden" name="next" value="course_detail" course.course_id %}">
-            <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選此課程</button>
-        </form>
         {% else %}
             <!-- 選課前預檢 -->
             <div class="precheck-section" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--light-bg); border-radius: 0.5rem;">
@@ -80,34 +74,42 @@
                 </div>
                 {% endif %}
             </div>
-            
-            {% if can_enroll %}
-            <form method="post" action="{% url 'enroll_course' %}" style="margin-bottom: 1rem;">
+        {% endif %}
+
+        <div class="detail-action-buttons">
+            {% if is_enrolled %}
+            <form method="post" action="{% url 'drop_course' %}">
                 {% csrf_token %}
                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                <input type="hidden" name="next" value="course_detail" course.course_id %}">
-                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">選修此課程</button>
+                <input type="hidden" name="next" value="course_detail">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選此課程</button>
             </form>
             {% else %}
-            <button class="btn btn-secondary btn-lg" style="width: 100%;" disabled>無法選課</button>
+                {% if can_enroll %}
+                <form method="post" action="{% url 'enroll_course' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                    <input type="hidden" name="next" value="course_detail">
+                    <button type="submit" class="btn btn-primary">選修此課程</button>
+                </form>
+                {% else %}
+                <button class="btn btn-secondary" disabled>無法選課</button>
+                {% endif %}
             {% endif %}
-        {% endif %}
-        
-        <!-- 收藏按鈕 -->
-        <div style="margin-top: 1rem;">
+
             {% if is_favorited %}
             <form method="post" action="{% url 'remove_favorite' %}">
                 {% csrf_token %}
                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                <input type="hidden" name="next" value="course_detail" course.course_id %}">
-                <button type="submit" class="btn btn-secondary" style="width: 100%;">★ 取消收藏</button>
+                <input type="hidden" name="next" value="course_detail">
+                <button type="submit" class="btn btn-secondary">★ 取消收藏</button>
             </form>
             {% else %}
             <form method="post" action="{% url 'add_favorite' %}">
                 {% csrf_token %}
                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                <input type="hidden" name="next" value="course_detail" course.course_id %}">
-                <button type="submit" class="btn btn-secondary" style="width: 100%;">☆ 收藏課程</button>
+                <input type="hidden" name="next" value="course_detail">
+                <button type="submit" class="btn btn-secondary">☆ 收藏課程</button>
             </form>
             {% endif %}
         </div>
