@@ -1,8 +1,8 @@
 # Django core
-Django>=5.0,<5.1
+Django>=6.0,<6.2
 
 # Environment variable management
 python-decouple>=3.8
 
-# WSGI server (optional, development environment uses Django built-in)
-# gunicorn>=21.2.0
+# Django Admin theme
+django-simpleui>=2026.1.13

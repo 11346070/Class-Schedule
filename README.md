@@ -8,6 +8,7 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 
 **重要特色：**
 - ✅ 使用 SQLite 持久化課程、選課與收藏資料
+- ✅ Django Admin + SimpleUI 後台管理
 - ✅ 伺服器重啟後資料仍會保留
 - ✅ 完整的課程時間衝突檢查
 - ✅ 精確的課程名額管理與占用
@@ -73,12 +74,18 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 - 星期與節次合法性
 - 學分合理性
 
+### 9. 後台管理（Admin + SimpleUI）
+- Django Admin 管理課程、選課、收藏與學分上限
+- 使用 SimpleUI 美化後台介面
+- 支援搜尋、篩選與分頁
+
 ## 技術架構
 
 ### 後端
-- **框架：** Django 5.x / 6.x
+- **框架：** Django 6.x
 - **語言：** Python 3.12
 - **資料庫：** SQLite（Django ORM）
+- **後台：** Django Admin + django-simpleui
 - **Session：** 檔案式 Session
 - **並發控制：** threading.Lock + 資料庫交易
 
@@ -88,11 +95,13 @@ Django 期中專題 - 完整的課表維護與選課管理系統
 - **腳本：** 原生 JavaScript（支援鍵盤導覽及無障礙功能）
 - **響應式：** 支援桌面、平板及手機瀏覽
 - **導覽列：** 響應式漢堡選單，支援 Escape 關閉及 ARIA 無障礙屬性
+- **後台主題：** SimpleUI
 
 ### 架構特點
 - Django MTV 架構
 - SQLite 儲存課程／選課／收藏
-- Session 識別使用者
+- Admin 後台可維護課程資料
+- Session 識別前台使用者
 - CSRF 防護
 - 表單伺服器端驗證
 - 學分上限檢查
@@ -149,7 +158,14 @@ python manage.py migrate
 
 首次啟動且資料庫尚無課程時，系統會自動載入示範課程。
 
-7. **執行系統檢查**
+7. **建立後台管理員帳號**
+```powershell
+python manage.py createsuperuser
+```
+
+依提示輸入帳號、Email、密碼。
+
+8. **執行系統檢查**
 ```powershell
 python manage.py check
 ```
@@ -162,11 +178,10 @@ python manage.py runserver 127.0.0.1:8000
 
 ### 訪問系統
 
-啟動成功後，在瀏覽器開啟：
+- **前台：** http://127.0.0.1:8000
+- **後台（SimpleUI）：** http://127.0.0.1:8000/admin/
 
-```
-http://127.0.0.1:8000
-```
+使用剛才建立的 superuser 登入後台，可管理課程、選課紀錄、收藏與學分上限。
 
 ## 系統操作說明
 
@@ -189,6 +204,12 @@ http://127.0.0.1:8000
 - 顯示收藏課程的選課可行性
 - 快速選課操作
 
+### 4. 後台管理
+- 開啟 `/admin/` 進入 SimpleUI 後台
+- 新增／編輯／刪除課程
+- 查看選課與收藏紀錄
+- 調整使用者學分上限
+
 ## 專案結構
 
 ```
@@ -198,6 +219,7 @@ Class-Schedule/
 │   └── urls.py             # 主 URL routing
 ├── timetable/              # 主要應用程式
 │   ├── models.py           # Course / Enrollment / Favorite 等模型
+│   ├── admin.py            # Admin 後台註冊（SimpleUI）
 │   ├── data_store.py       # 選課業務邏輯（SQLite ORM）
 │   ├── views.py            # 視圖處理
 │   ├── urls.py             # App URL routing
@@ -255,8 +277,9 @@ Class-Schedule/
 ## 開發說明
 
 ### 依賴套件
-- Django >= 5.0, < 5.1
+- Django >= 6.0, < 6.2
 - python-decouple >= 3.8（環境變數管理）
+- django-simpleui >= 2026.1.13（Admin 主題）
 
 ### 停止伺服器
 在終端機按 `Ctrl + C`
