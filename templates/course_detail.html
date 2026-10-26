@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.name }} - 課程詳情{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ course.name }}</h1>
+    <p class="course-id">課程編號：{{ course.course_id }}</p>
+</div>
+
+<div class="course-detail-section">
+    <div class="detail-card">
+        <h2>課程資訊</h2>
+        <table class="detail-table">
+            <tr>
+                <th>課程編號</th>
+                <td>{{ course.course_id }}</td>
+            </tr>
+            <tr>
+                <th>課程名稱</th>
+                <td>{{ course.name }}</td>
+            </tr>
+            <tr>
+                <th>授課教師</th>
+                <td>{{ course.teacher }}</td>
+            </tr>
+            <tr>
+                <th>上課時間</th>
+                <td>{{ course.time_display }}</td>
+            </tr>
+            <tr>
+                <th>學分</th>
+                <td>{{ course.credits }}</td>
+            </tr>
+            <tr>
+                <th>課程類型</th>
+                <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
+            </tr>
+            <tr>
+                <th>開課班級</th>
+                <td>{{ course.target_class }}</td>
+            </tr>
+            <tr>
+                <th>名額狀況</th>
+                <td>
+                    <span class="quota-info {% if course.is_full %}quota-full{% elif course.remaining_quota < 5 %}quota-low{% endif %}">
+                        剩餘 {{ course.remaining_quota }} / 總共 {{ course.total_quota }}
+                    </span>
+                    {% if course.is_full %}
+                    <span class="badge badge-danger">已額滿</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 選課狀態與操作 -->
+    <div class="action-card">
+        {% if is_enrolled %}
+        <div class="alert alert-success">
+            ✓ 您已選修此課程
+        </div>
+        <form method="post" action="{% url 'drop_course' %}">
+            {% csrf_token %}
+            <input type="hidden" name="course_id" value="{{ course.course_id }}">
+            <input type="hidden" name="next" value="course_list">
+            <button type="submit" class="btn btn-danger btn-lg" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選此課程</button>
+        </form>
+        {% else %}
+            {% if course.is_full %}
+            <div class="alert alert-danger">
+                ✗ 此課程已額滿，無法選課
+            </div>
+            <button class="btn btn-secondary btn-lg" disabled>已額滿</button>
+            {% elif conflict_course %}
+            <div class="alert alert-warning">
+                ⚠ 時間衝突：與「{{ conflict_course.name }}」（{{ conflict_course.time_display }}）衝堂
+            </div>
+            <button class="btn btn-secondary btn-lg" disabled>時間衝突</button>
+            {% else %}
+            <form method="post" action="{% url 'enroll_course' %}">
+                {% csrf_token %}
+                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                <input type="hidden" name="next" value="course_list">
+                <button type="submit" class="btn btn-primary btn-lg">選修此課程</button>
+            </form>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="back-link">
+    <a href="{% url 'course_list' %}" class="btn btn-secondary">← 返回課程清單</a>
+</div>
+{% endblock %}

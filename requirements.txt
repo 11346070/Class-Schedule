@@ -1,0 +1,11 @@
+# Django 核心
+Django>=5.0,<5.1
+
+# 環境變數管理
+python-decouple>=3.8
+
+# 簡報產生
+python-pptx>=0.6.23
+
+# WSGI 伺服器（可選，開發環境使用 Django 內建即可）
+# gunicorn>=21.2.0

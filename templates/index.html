@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}首頁 - 個人課表維護系統{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>我的課表總覽</h1>
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">已選課程</span>
+            <span class="stat-value">{{ enrolled_count }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">總學分</span>
+            <span class="stat-value">{{ total_credits }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- 每週課表 -->
+<div class="weekly-schedule">
+    <h2>本週課程表</h2>
+    {% if enrolled_courses %}
+    <div class="schedule-table-wrapper">
+        <table class="schedule-table">
+            <thead>
+                <tr>
+                    <th>節次</th>
+                    {% for weekday, weekday_name in weekdays %}
+                    <th>{{ weekday_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for period_row in weekly_schedule %}
+                <tr>
+                    <td class="period-label">第{{ period_row.period }}節</td>
+                    {% for cell in period_row.courses %}
+                    <td class="schedule-cell">
+                        {% if cell %}
+                            {% if not cell.is_continuation %}
+                            <div class="course-block" style="height: calc({{ cell.rowspan }} * 60px);">
+                                <div class="course-name">{{ cell.course.name }}</div>
+                                <div class="course-info">{{ cell.course.teacher }}</div>
+                                <div class="course-info">{{ cell.course.start_period }}-{{ cell.course.end_period }}節</div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>您還沒有選課，前往<a href="{% url 'course_list' %}">課程清單</a>開始選課吧！</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 已選課程列表 -->
+{% if enrolled_courses %}
+<div class="course-list-section">
+    <h2>已選課程詳細</h2>
+    <div class="course-cards">
+        {% for course in enrolled_courses %}
+        <div class="course-card">
+            <div class="course-card-header">
+                <h3>{{ course.name }}</h3>
+                <span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span>
+            </div>
+            <div class="course-card-body">
+                <p><strong>課程編號：</strong>{{ course.course_id }}</p>
+                <p><strong>授課教師：</strong>{{ course.teacher }}</p>
+                <p><strong>上課時間：</strong>{{ course.get_time_display }}</p>
+                <p><strong>學分：</strong>{{ course.credits }}</p>
+            </div>
+            <div class="course-card-footer">
+                <form method="post" action="{% url 'drop_course' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                    <input type="hidden" name="next" value="index">
+                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選</button>
+                </form>
+                <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳細資訊</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 快速動作 -->
+<div class="quick-actions">
+    <a href="{% url 'course_list' %}" class="btn btn-primary btn-lg">瀏覽課程清單</a>
+    <a href="{% url 'my_courses' %}" class="btn btn-secondary btn-lg">管理我的課表</a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 自訂 template filter 功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 處理課表顯示
+    console.log('課表已載入');
+});
+</script>
+{% endblock %}

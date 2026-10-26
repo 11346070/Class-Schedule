@@ -1,0 +1,588 @@
+/* 個人課表維護系統 - 主要樣式表 */
+
+/* === 全域樣式 === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --secondary-color: #6b7280;
+    --light-bg: #f9fafb;
+    --border-color: #e5e7eb;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background-color: var(--light-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* === 導航列 === */
+.navbar {
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand a {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.nav-menu a {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.nav-menu a:hover, .nav-menu a.active {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+/* === 主要內容 === */
+.main-content {
+    flex: 1;
+    padding: 2rem 0;
+}
+
+/* === 訊息提示 === */
+.messages-container {
+    padding: 1rem 0;
+}
+
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.alert-error, .alert-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.alert-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    margin-left: 1rem;
+}
+
+/* === 頁面標題 === */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.lead {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+}
+
+.course-id {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* === 統計列 === */
+.stats-bar {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* === 按鈕 === */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background-color: #4b5563;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.125rem;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* === 表格 === */
+.course-table-wrapper, .schedule-table-wrapper {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.course-table, .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.course-table thead, .schedule-table thead {
+    background-color: var(--light-bg);
+}
+
+.course-table th, .schedule-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.course-table td, .schedule-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.course-table tbody tr:hover {
+    background-color: var(--light-bg);
+}
+
+.enrolled-row {
+    background-color: #dbeafe;
+}
+
+.full-row {
+    background-color: #fee2e2;
+}
+
+/* === 課表樣式 === */
+.weekly-schedule {
+    margin-bottom: 3rem;
+}
+
+.schedule-table {
+    table-layout: fixed;
+}
+
+.schedule-table th {
+    text-align: center;
+}
+
+.schedule-table td {
+    text-align: center;
+    vertical-align: top;
+    position: relative;
+    height: 60px;
+}
+
+.period-label {
+    font-weight: 600;
+    background-color: var(--light-bg);
+}
+
+.schedule-cell {
+    position: relative;
+}
+
+.course-block {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    right: 4px;
+    background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.course-name {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.course-info {
+    font-size: 0.7rem;
+    opacity: 0.9;
+}
+
+/* === 課程卡片 === */
+.course-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.course-card {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.2s;
+}
+
+.course-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.course-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.course-card-header h3 {
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+.course-card-body p {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.course-card-footer {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* === 徽章 === */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.course-type-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-必修 {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-選修 {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-通識 {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* === 名額資訊 === */
+.quota-info {
+    font-weight: 600;
+}
+
+.quota-full {
+    color: var(--danger-color);
+}
+
+.quota-low {
+    color: var(--warning-color);
+}
+
+/* === 搜尋表單 === */
+.search-filter-section {
+    background-color: #fff;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.search-form .form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.form-group {
+    flex: 1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* === 詳細資訊 === */
+.course-detail-section, .info-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.detail-card, .info-card, .action-card {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detail-card h2, .info-card h2 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.detail-table {
+    width: 100%;
+}
+
+.detail-table th {
+    text-align: left;
+    padding: 0.75rem;
+    background-color: var(--light-bg);
+    font-weight: 600;
+    width: 30%;
+}
+
+.detail-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* === 其他元件 === */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+}
+
+.empty-state h2 {
+    margin-bottom: 1rem;
+}
+
+.results-count {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.back-link {
+    margin-top: 2rem;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.system-notes h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.system-notes ul, .tech-list, .feature-list {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.system-notes li, .tech-list li, .feature-list li {
+    margin-bottom: 0.5rem;
+}
+
+/* === 頁尾 === */
+.footer {
+    background-color: #fff;
+    padding: 2rem 0;
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.footer p {
+    margin: 0.25rem 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* === 響應式設計 === */
+@media (max-width: 768px) {
+    .nav-menu {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .search-form .form-row {
+        flex-direction: column;
+    }
+    
+    .stats-bar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .course-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .schedule-table {
+        font-size: 0.75rem;
+    }
+    
+    .course-table, .schedule-table {
+        display: block;
+        overflow-x: auto;
+    }
+}

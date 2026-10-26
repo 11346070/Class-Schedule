@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}課程清單 - 個人課表維護系統{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>課程清單</h1>
+    <p class="lead">瀏覽所有課程並選擇您想要的課程</p>
+</div>
+
+<!-- 搜尋與篩選 -->
+<div class="search-filter-section">
+    <form method="get" action="{% url 'course_list' %}" class="search-form">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="keyword">關鍵字</label>
+                <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="課程名稱、教師或課程編號" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="course_type">課程類型</label>
+                <select id="course_type" name="course_type" class="form-control">
+                    <option value="">全部</option>
+                    {% for ct in course_types %}
+                    <option value="{{ ct }}" {% if course_type == ct %}selected{% endif %}>{{ ct }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="weekday">星期</label>
+                <select id="weekday" name="weekday" class="form-control">
+                    <option value="0">全部</option>
+                    {% for wd_num, wd_name in weekdays %}
+                    <option value="{{ wd_num }}" {% if weekday == wd_num %}selected{% endif %}>{{ wd_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">搜尋</button>
+                <a href="{% url 'course_list' %}" class="btn btn-secondary">清除</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- 課程列表 -->
+<div class="course-results">
+    <p class="results-count">共找到 <strong>{{ courses|length }}</strong> 門課程</p>
+    
+    {% if courses %}
+    <div class="course-table-wrapper">
+        <table class="course-table">
+            <thead>
+                <tr>
+                    <th>課程編號</th>
+                    <th>課程名稱</th>
+                    <th>授課教師</th>
+                    <th>時間</th>
+                    <th>學分</th>
+                    <th>類型</th>
+                    <th>名額</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr class="{% if course.is_enrolled %}enrolled-row{% endif %} {% if course.is_full %}full-row{% endif %}">
+                    <td>{{ course.course_id }}</td>
+                    <td><strong>{{ course.name }}</strong></td>
+                    <td>{{ course.teacher }}</td>
+                    <td>{{ course.time_display }}</td>
+                    <td>{{ course.credits }}</td>
+                    <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
+                    <td>
+                        <span class="quota-info {% if course.is_full %}quota-full{% elif course.remaining_quota < 5 %}quota-low{% endif %}">
+                            {{ course.remaining_quota }}/{{ course.total_quota }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if course.is_enrolled %}
+                        <span class="badge badge-success">已選課</span>
+                        <form method="post" action="{% url 'drop_course' %}" style="display: inline; margin-left: 5px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                            <input type="hidden" name="next" value="course_list">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
+                        </form>
+                        {% else %}
+                            {% if course.is_full %}
+                            <button class="btn btn-secondary btn-sm" disabled>已額滿</button>
+                            {% else %}
+                            <form method="post" action="{% url 'enroll_course' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                                <input type="hidden" name="next" value="course_list">
+                                <button type="submit" class="btn btn-primary btn-sm">選課</button>
+                            </form>
+                            {% endif %}
+                        {% endif %}
+                        <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>找不到符合條件的課程，請嘗試其他搜尋條件。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
