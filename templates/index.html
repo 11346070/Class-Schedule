@@ -3,33 +3,55 @@
 {% block title %}首頁 - 個人課表維護系統{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>我的課表總覽</h1>
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-label">已選課程</span>
-            <span class="stat-value">{{ enrolled_count }}</span>
+<div class="page-header page-header-split">
+    <div>
+        <h1>我的課表總覽</h1>
+        <p class="lead">本學期已選學分、退選下限，以及這一週的課。</p>
+    </div>
+    <a class="btn btn-secondary" href="{% url 'progress' %}">查看畢業進度</a>
+</div>
+<section class="detail-card credit-overview">
+    <div class="overview-top">
+        <div>
+            <p class="eyebrow">本學期學分</p>
+            <p class="overview-score">{{ total_credits }}<small>/ {{ credit_limit }} 學分</small></p>
+            <p class="lead">已選 {{ enrolled_count }} 門 · 還可再選 {{ remaining_credits }} 學分</p>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">總學分</span>
-            <span class="stat-value">{{ total_credits }} / {{ credit_limit }}</span>
+        <div class="overview-side">
+            {% if enrolled_count and total_credits <= credit_floor %}
+            <span class="pill pill-warn">已達退選下限</span>
+            {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
+            <span class="pill pill-warn">接近退選下限</span>
+            {% elif total_credits >= credit_limit %}
+            <span class="pill pill-warn">已達學分上限</span>
+            {% else %}
+            <span class="pill pill-ok">高於退選下限</span>
+            {% endif %}
+            <p class="lead">退選下限 {{ credit_floor }}，由管理員設定</p>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">學分下限</span>
-            <span class="stat-value">{{ credit_floor }}</span>
-        </div>
+    </div>
+    <div class="meter" role="img" aria-label="已選 {{ total_credits }} 學分，上限 {{ credit_limit }}，退選下限 {{ credit_floor }}">
+        <div class="meter-fill" style="width: {{ credit_percent }}%;"></div>
+        <div class="meter-floor" style="left: {{ floor_percent }}%;"></div>
+    </div>
+    <div class="meter-legend">
+        <span>0</span>
+        <span style="left: {{ floor_percent }}%;">退選下限 {{ credit_floor }}</span>
+        <span>上限 {{ credit_limit }}</span>
     </div>
     {% if enrolled_count and total_credits <= credit_floor %}
     <p class="credit-note">已達最低學分，無法再自行退選。如需退選，請聯絡管理員。</p>
     {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
     <p class="credit-note">接近最低學分。退到下限以下時，只能請管理員協助退選。</p>
     {% endif %}
-    <p class="progress-link"><a href="{% url 'progress' %}">查看畢業進度</a></p>
-</div>
+</section>
 
 <!-- 每週課表 -->
 <div class="weekly-schedule">
-    <h2>本週課程表</h2>
+    <div class="section-head">
+        <h2>本週課程表</h2>
+        <p class="lead">第 10 節時間待確認</p>
+    </div>
     {% if enrolled_courses %}
     <div class="schedule-table-wrapper">
         <table class="schedule-table">
@@ -43,13 +65,23 @@
             </thead>
             <tbody>
                 {% for period_row in weekly_schedule %}
+                {% if period_row.period == 5 %}
+                <tr class="break-row"><td colspan="8">午休</td></tr>
+                {% endif %}
                 <tr>
-                    <td class="period-label">第{{ period_row.period }}節</td>
+                    <td class="period-label">
+                        <span class="period-no">第{{ period_row.period }}節</span>
+                        {% if period_row.time %}
+                        <span class="period-time">{{ period_row.time }}</span>
+                        {% else %}
+                        <span class="period-time is-pending">待確認</span>
+                        {% endif %}
+                    </td>
                     {% for cell in period_row.courses %}
                     <td class="schedule-cell">
                         {% if cell %}
                             {% if not cell.is_continuation %}
-                            <div class="course-block" style="height: calc({{ cell.rowspan }} * 60px);">
+                            <div class="course-block type-{{ cell.course.course_type }}" style="height: calc({{ cell.rowspan }} * 60px);">
                                 <div class="course-name">{{ cell.course.name }}</div>
                                 <div class="course-info">{{ cell.course.teacher }}</div>
                                 <div class="course-info">{{ cell.course.start_period }}-{{ cell.course.end_period }}節</div>

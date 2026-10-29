@@ -93,6 +93,23 @@ def redirect_after_action(request, default='course_list'):
     return redirect(next_url)
 
 
+PERIOD_TIMES = {
+    1: "08:10–09:00",
+    2: "09:10–10:00",
+    3: "10:10–11:00",
+    4: "11:10–12:00",
+    5: "13:30–14:20",
+    6: "14:25–15:15",
+    7: "15:25–16:15",
+    8: "16:20–17:10",
+    9: "17:15–18:05",
+    10: "",
+    11: "18:30–19:15",
+    12: "19:20–20:05",
+    13: "20:15–21:00",
+}
+
+
 @login_required
 @require_http_methods(["GET"])
 def index(request):
@@ -106,7 +123,11 @@ def index(request):
     # 建立每週課表（簡化版，直接給模板使用）
     weekly_schedule = []
     for period in range(1, 14):
-        period_row = {'period': period, 'courses': []}
+        period_row = {
+            'period': period,
+            'time': PERIOD_TIMES.get(period, ''),
+            'courses': [],
+        }
         for weekday in range(1, 8):
             # 找出這個時段的課程
             period_course = None
@@ -131,6 +152,9 @@ def index(request):
         'total_credits': total_credits,
         'credit_limit': credit_limit,
         'credit_floor': credit_floor,
+        'remaining_credits': max(credit_limit - total_credits, 0),
+        'credit_percent': min(100, round(total_credits * 100 / credit_limit)) if credit_limit else 0,
+        'floor_percent': min(100, round(credit_floor * 100 / credit_limit)) if credit_limit else 0,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
         'weekdays': [
