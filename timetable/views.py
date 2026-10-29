@@ -71,6 +71,11 @@ def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authentica
             course_dict["can_enroll"] = can_enroll
             course_dict["enroll_message"] = message
         courses_with_status.append(course_dict)
+    summaries = course_store.get_review_summaries(
+        [course.course_id for course in courses]
+    )
+    for course_dict in courses_with_status:
+        course_dict["review_summary"] = summaries.get(course_dict["course_id"])
     return courses_with_status
 
 
@@ -316,7 +321,9 @@ def course_detail(request, course_id):
         can_enroll, enroll_message = course_store.check_enrollment_eligibility(user_id, course_id)
     
     course_dict = course.to_dict()
-    
+    summaries = course_store.get_review_summaries([course_id])
+    my_review = course_store.get_user_review(user_id, course_id) if authenticated else None
+
     context = {
         'course': course_dict,
         'is_enrolled': is_enrolled,
@@ -324,9 +331,30 @@ def course_detail(request, course_id):
         'conflict_course': conflict_course.to_dict() if conflict_course else None,
         'can_enroll': can_enroll,
         'enroll_message': enroll_message,
+        'review_summary': summaries.get(course_id),
+        'can_review': authenticated and course_store.can_review_course(user_id, course_id),
+        'my_review': my_review,
     }
     
     return render(request, 'course_detail.html', context)
+
+
+@login_required
+@require_POST
+def save_review(request, course_id):
+    """儲存或更新課程評價。"""
+    user_id = get_user_id(request)
+    success, message = course_store.save_review(
+        user_id,
+        course_id,
+        request.POST.get("homework", ""),
+        request.POST.get("exam", ""),
+    )
+    if success:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    return redirect("course_detail", course_id=course_id)
 
 
 @login_required

@@ -17,6 +17,7 @@ urlpatterns = [
     
     # 課程詳細資訊
     path('courses/<str:course_id>/', views.course_detail, name='course_detail'),
+    path('courses/<str:course_id>/review/', views.save_review, name='save_review'),
     
     # 收藏清單
     path('favorites/', views.favorites, name='favorites'),

@@ -209,6 +209,28 @@ class StudyRecord(models.Model):
         return f"{self.user_id} {self.semester} {self.course_code} {self.get_status_display()}"
 
 
+class CourseReview(models.Model):
+    """修過的學生對作業量與考試難度的評價。"""
+    HOMEWORK_CHOICES = [("多", "多"), ("適中", "適中"), ("少", "少")]
+    EXAM_CHOICES = [("難", "難"), ("適中", "適中"), ("易", "易")]
+
+    user_id = models.CharField("使用者 ID", max_length=64, db_index=True)
+    course = models.ForeignKey(
+        Course, verbose_name="課程", on_delete=models.CASCADE, related_name="reviews"
+    )
+    homework = models.CharField("作業量", max_length=10, choices=HOMEWORK_CHOICES)
+    exam = models.CharField("考試難度", max_length=10, choices=EXAM_CHOICES)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("user_id", "course")]
+        verbose_name = "課程評價"
+        verbose_name_plural = "課程評價"
+
+    def __str__(self):
+        return f"{self.user_id} {self.course_id} 作業{self.homework} 考試{self.exam}"
+
+
 class StudentProfile(models.Model):
     """學生選擇的主修模組。另一模組學分最多認列到上限。"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)

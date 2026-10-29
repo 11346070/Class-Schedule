@@ -75,7 +75,12 @@
                 {% for course in courses %}
                 <tr class="{% if course.is_enrolled %}enrolled-row{% endif %} {% if course.is_full %}full-row{% endif %}">
                     <td>{{ course.course_id }}</td>
-                    <td><strong>{{ course.name }}</strong></td>
+                    <td>
+                        <strong>{{ course.name }}</strong>
+                        {% if course.review_summary %}
+                        <small class="review-summary">作業{{ course.review_summary.homework }} · 考試{{ course.review_summary.exam }}</small>
+                        {% endif %}
+                    </td>
                     <td>{{ course.teacher }}</td>
                     <td>{{ course.time_display }}</td>
                     <td>{{ course.credits }}</td>

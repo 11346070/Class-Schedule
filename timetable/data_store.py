@@ -15,6 +15,7 @@ from .models import (
     MODULE_FINANCE,
     MODULE_INFO,
     Course,
+    CourseReview,
     Enrollment,
     Favorite,
     GraduationRequirement,
@@ -469,6 +470,64 @@ class CourseDataStore:
             row["detail_id"] = row["course_code"] if row["course_code"] in existing else ""
         rows.sort(key=lambda row: (row["semester"], row["course_code"]), reverse=True)
         return rows
+
+    def can_review_course(self, user_id: str, course_id: str) -> bool:
+        if not user_id:
+            return False
+        if self.is_user_enrolled(user_id, course_id):
+            return True
+        return StudyRecord.objects.filter(
+            user_id=user_id, course_code=course_id
+        ).exists()
+
+    def get_user_review(self, user_id: str, course_id: str):
+        if not user_id:
+            return None
+        return CourseReview.objects.filter(
+            user_id=user_id, course_id=course_id
+        ).first()
+
+    def save_review(
+        self, user_id: str, course_id: str, homework: str, exam: str
+    ) -> Tuple[bool, str]:
+        course = self.get_course(course_id)
+        if not course:
+            return False, "課程不存在"
+        if not self.can_review_course(user_id, course_id):
+            return False, "選修過或有修課紀錄才能評價"
+        homework_values = {item[0] for item in CourseReview.HOMEWORK_CHOICES}
+        exam_values = {item[0] for item in CourseReview.EXAM_CHOICES}
+        if homework not in homework_values or exam not in exam_values:
+            return False, "請選擇作業量與考試難度"
+        CourseReview.objects.update_or_create(
+            user_id=user_id,
+            course=course,
+            defaults={"homework": homework, "exam": exam},
+        )
+        return True, "已儲存課程評價"
+
+    def get_review_summaries(self, course_ids: List[str]) -> dict:
+        buckets = {}
+        for review in CourseReview.objects.filter(course_id__in=course_ids):
+            bucket = buckets.setdefault(
+                review.course_id,
+                {"count": 0, "homework": {}, "exam": {}},
+            )
+            bucket["count"] += 1
+            bucket["homework"][review.homework] = bucket["homework"].get(review.homework, 0) + 1
+            bucket["exam"][review.exam] = bucket["exam"].get(review.exam, 0) + 1
+
+        def mode(counts: dict) -> str:
+            return max(counts, key=counts.get)
+
+        summaries = {}
+        for course_id, bucket in buckets.items():
+            summaries[course_id] = {
+                "count": bucket["count"],
+                "homework": mode(bucket["homework"]),
+                "exam": mode(bucket["exam"]),
+            }
+        return summaries
 
     def get_user_total_credits(self, user_id: str) -> int:
         enrolled_courses = self.get_user_enrollments(user_id)

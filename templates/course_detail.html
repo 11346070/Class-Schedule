@@ -120,6 +120,41 @@
     </div>
 </div>
 
+<div class="detail-card stack-card">
+    <h2>課程評價</h2>
+    {% if review_summary %}
+    <p>共 {{ review_summary.count }} 則：作業量 {{ review_summary.homework }}，考試難度 {{ review_summary.exam }}</p>
+    {% else %}
+    <p>目前還沒有評價。</p>
+    {% endif %}
+    {% if can_review %}
+    <form method="post" action="{% url 'save_review' course.course_id %}" class="review-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="homework">作業量</label>
+            <select id="homework" name="homework" class="form-control" required>
+                <option value="多" {% if my_review and my_review.homework == "多" %}selected{% endif %}>多</option>
+                <option value="適中" {% if not my_review or my_review.homework == "適中" %}selected{% endif %}>適中</option>
+                <option value="少" {% if my_review and my_review.homework == "少" %}selected{% endif %}>少</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="exam">考試難度</label>
+            <select id="exam" name="exam" class="form-control" required>
+                <option value="難" {% if my_review and my_review.exam == "難" %}selected{% endif %}>難</option>
+                <option value="適中" {% if not my_review or my_review.exam == "適中" %}selected{% endif %}>適中</option>
+                <option value="易" {% if my_review and my_review.exam == "易" %}selected{% endif %}>易</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" data-no-disable>{% if my_review %}更新評價{% else %}送出評價{% endif %}</button>
+    </form>
+    {% elif user.is_authenticated %}
+    <p>選修過或有修課紀錄後才能評價。</p>
+    {% else %}
+    <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">登入</a>後，選修過的課才能評價。</p>
+    {% endif %}
+</div>
+
 <div class="back-link">
     <a href="{% url 'course_list' %}" class="btn btn-secondary">← 返回課程清單</a>
 </div>

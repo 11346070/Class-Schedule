@@ -9,6 +9,7 @@ from .models import (
     Course,
     Enrollment,
     Favorite,
+    CourseReview,
     GraduationRequirement,
     StudentProfile,
     StudyRecord,
@@ -76,6 +77,14 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
         "general_credits",
         "recognition_cap",
     )
+
+
+@admin.register(CourseReview)
+class CourseReviewAdmin(admin.ModelAdmin):
+    list_display = ("user_id", "course", "homework", "exam", "updated_at")
+    list_filter = ("homework", "exam")
+    search_fields = ("user_id", "course__course_id", "course__name")
+    list_per_page = 25
 
 
 @admin.register(StudentProfile)
