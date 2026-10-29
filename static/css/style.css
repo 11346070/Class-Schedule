@@ -19,6 +19,9 @@
     --text-primary: #111827;
     --text-secondary: #6b7280;
     --text-muted: #9ca3af;
+    --surface: #fff;
+    --nav-bg: rgba(255, 255, 255, 0.92);
+    color-scheme: light;
 }
 
 body {
@@ -43,7 +46,7 @@ body {
 
 /* === 導航列 === */
 .navbar {
-    background-color: rgba(255, 255, 255, 0.92);
+    background-color: var(--nav-bg);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border-color);
     box-shadow: none;
@@ -141,7 +144,7 @@ body {
     padding: 0 12px 0 6px;
     border-radius: 999px;
     border: 1px solid var(--border-color);
-    background: #fff;
+    background: var(--surface);
     cursor: pointer;
     font: inherit;
     font-weight: 600;
@@ -154,7 +157,7 @@ body {
     top: calc(100% + 8px);
     width: 200px;
     padding: 6px;
-    background: #fff;
+    background: var(--surface);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: 0 10px 28px rgba(21, 32, 51, 0.08);
@@ -504,7 +507,7 @@ body {
 
 /* === 表格 === */
 .course-table-wrapper, .schedule-table-wrapper {
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 0.5rem;
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -732,7 +735,7 @@ body {
 }
 
 .course-card {
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 0.5rem;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -827,7 +830,7 @@ body {
 
 /* === 搜尋表單 === */
 .search-filter-section {
-    background-color: #fff;
+    background-color: var(--surface);
     padding: 1.5rem;
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -859,6 +862,8 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 0.375rem;
     font-size: 1rem;
+    color: var(--text-primary);
+    background-color: var(--surface);
 }
 
 .form-control:focus {
@@ -896,7 +901,7 @@ body {
 }
 
 .detail-card, .info-card, .action-card {
-    background-color: #fff;
+    background-color: var(--surface);
     padding: 2rem;
     border-radius: 0.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -951,7 +956,7 @@ body {
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    background-color: #fff;
+    background-color: var(--surface);
     border-radius: 0.5rem;
 }
 
@@ -997,7 +1002,7 @@ body {
 
 /* === 頁尾 === */
 .footer {
-    background-color: #fff;
+    background-color: var(--surface);
     padding: 2rem 0;
     margin-top: auto;
     border-top: 1px solid var(--border-color);
@@ -1119,7 +1124,7 @@ body {
         flex-direction: column;
         gap: 0;
         margin-top: 0;
-        background-color: #fff;
+        background-color: var(--surface);
         border-top: 1px solid var(--border-color);
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
@@ -1164,6 +1169,7 @@ body {
     }
 
     .nav-menu .mobile-only { display: block; width: 100%; }
+    .desktop-theme { display: none; }
     
     .nav-menu a {
         padding: 0.875rem 1rem;
@@ -1248,7 +1254,7 @@ body {
         margin-bottom: 12px;
         border: 1px solid var(--border-color);
         border-radius: 14px;
-        background: #fff;
+        background: var(--surface);
         overflow: hidden;
     }
     .course-table.course-list-table td {
@@ -1593,7 +1599,7 @@ body {
     min-height: 100vh;
     display: grid;
     grid-template-columns: 1.05fr 0.95fr;
-    background: #fff;
+    background: var(--surface);
 }
 
 .auth-aside {
@@ -1783,7 +1789,7 @@ body {
 }
 
 .pill-ok { background: #e7f6f1; color: #115e59; }
-.pill-warn { background: #fff4e5; color: #92400e; }
+.pill-warn { background: var(--surface)4e5; color: #92400e; }
 
 .meter {
     position: relative;
@@ -1859,7 +1865,7 @@ body {
     box-shadow: inset 3px 0 0 #0f766e;
 }
 .course-block.type-通識 {
-    background: #fff4e5;
+    background: var(--surface)4e5;
     color: #92400e;
     box-shadow: inset 3px 0 0 #b45309;
 }
@@ -1915,4 +1921,79 @@ body {
 
 @media (max-width: 860px) {
     .settings-grid { grid-template-columns: 1fr; }
+}
+
+.nav-menu .js-theme {
+    background: transparent;
+    border: 0;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.theme-corner {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    border: 1px solid var(--border-color);
+    background: var(--surface);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.auth-screen { position: relative; }
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --light-bg: #0e141b;
+    --surface: #17202b;
+    --nav-bg: rgba(23, 32, 43, 0.92);
+    --border-color: #2d3b4d;
+    --text-primary: #e8eef6;
+    --text-secondary: #a8b4c4;
+    --text-muted: #7f8da0;
+    --secondary-color: #94a3b8;
+}
+
+html[data-theme="dark"] .nav-menu a.active,
+html[data-theme="dark"] .account-btn {
+    background: #243556;
+    color: #dce7ff;
+}
+
+html[data-theme="dark"] .enrolled-row { background: #1c2c44; }
+html[data-theme="dark"] .full-row { background: #3a2226; }
+
+html[data-theme="dark"] .alert-success { background: #14352f; color: #c6f6ea; }
+html[data-theme="dark"] .alert-error,
+html[data-theme="dark"] .alert-danger { background: #3a2226; color: #fecaca; }
+html[data-theme="dark"] .alert-warning,
+html[data-theme="dark"] .credit-note { background: #3a2d14; color: #fde7b0; }
+
+html[data-theme="dark"] .badge-success,
+html[data-theme="dark"] .badge-選修,
+html[data-theme="dark"] .course-block.type-選修 { background: #14352f; color: #c6f6ea; }
+html[data-theme="dark"] .badge-danger { background: #3a2226; color: #fecaca; }
+html[data-theme="dark"] .badge-warning,
+html[data-theme="dark"] .badge-通識,
+html[data-theme="dark"] .pill-warn,
+html[data-theme="dark"] .course-block.type-通識 { background: #3a2d14; color: #fde7b0; }
+html[data-theme="dark"] .badge-必修,
+html[data-theme="dark"] .pill-ok,
+html[data-theme="dark"] .course-block.type-必修 { background: #243556; color: #dce7ff; }
+html[data-theme="dark"] .period-time.is-pending { color: #fbbf24; }
+
+html[data-theme="dark"] .course-actions .btn:disabled,
+html[data-theme="dark"] .course-actions .btn:disabled:hover {
+    background: #243041;
+    color: #8b9bb0;
 }

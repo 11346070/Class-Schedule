@@ -1,6 +1,22 @@
 // 個人課表維護系統 - JavaScript
 
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("schedule-theme", theme); } catch (e) {}
+    document.querySelectorAll(".js-theme").forEach(function (button) {
+        button.textContent = theme === "dark" ? "淺色模式" : "深色模式";
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    applyTheme(document.documentElement.getAttribute("data-theme") || "light");
+    document.querySelectorAll(".js-theme").forEach(function (button) {
+        button.addEventListener("click", function () {
+            var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            applyTheme(next);
+        });
+    });
+
     console.log('個人課表維護系統已載入');
     
     // 導覽選單切換（行動版）

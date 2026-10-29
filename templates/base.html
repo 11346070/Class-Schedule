@@ -4,7 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}個人課表維護系統{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261029n">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem("schedule-theme");
+                var theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+                document.documentElement.setAttribute("data-theme", theme);
+            } catch (e) {}
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css?v=20261029o">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -39,6 +48,7 @@
                 <li><a href="{% url 'progress' %}" {% if request.path == '/progress/' %}class="active"{% endif %}>修課進度</a></li>
                 <li class="menu-split" aria-hidden="true"></li>
                 <li class="mobile-only"><a href="{% url 'account_settings' %}" {% if request.path == '/settings/' %}class="active"{% endif %}>個人設定</a></li>
+                <li class="mobile-only"><button type="button" class="nav-link-btn js-theme">深色模式</button></li>
                 <li class="mobile-only">
                     <form method="post" action="{% url 'logout' %}" class="nav-logout-form">
                         {% csrf_token %}
@@ -48,6 +58,8 @@
                 {% else %}
                 <li><a href="{% url 'login' %}" {% if request.path == '/login/' %}class="active"{% endif %}>登入</a></li>
                 <li><a href="{% url 'register' %}" {% if request.path == '/register/' %}class="active"{% endif %}>註冊</a></li>
+                <li class="desktop-theme"><button type="button" class="js-theme">深色模式</button></li>
+                <li class="mobile-only"><button type="button" class="nav-link-btn js-theme">深色模式</button></li>
                 {% endif %}
             </ul>
             {% if user.is_authenticated %}
@@ -58,6 +70,7 @@
                 </button>
                 <div class="account-menu">
                     <a href="{% url 'account_settings' %}">個人設定</a>
+                    <button type="button" class="js-theme">深色模式</button>
                     <form method="post" action="{% url 'logout' %}">
                         {% csrf_token %}
                         <button type="submit" class="danger">登出</button>
@@ -101,7 +114,7 @@
     </footer>
     {% endblock %}
 
-    <script src="/static/js/main.js?v=20261029k"></script>
+    <script src="/static/js/main.js?v=20261029o"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
