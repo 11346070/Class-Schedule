@@ -3,6 +3,7 @@ Views - 處理所有網頁請求與選課操作
 """
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -165,9 +166,17 @@ def course_list(request):
     )
     for course_dict in courses_with_status:
         course_dict['is_favorited'] = course_dict['course_id'] in favorited_course_ids
-    
+
+    paginator = Paginator(courses_with_status, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+
     context = {
-        'courses': courses_with_status,
+        'courses': page_obj,
+        'page_obj': page_obj,
+        'querystring': query_params.urlencode(),
+        'total_count': paginator.count,
         'keyword': keyword,
         'course_type': course_type,
         'weekday': weekday,

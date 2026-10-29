@@ -135,6 +135,19 @@ body {
     text-align: center;
 }
 
+.pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 2rem;
+}
+
+.pagination .btn {
+    min-width: 2.5rem;
+}
+
 .auth-card .errorlist {
     list-style: none;
     margin-top: 0.35rem;

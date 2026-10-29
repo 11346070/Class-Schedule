@@ -51,7 +51,7 @@
 
 <!-- 課程列表 -->
 <div class="course-results">
-    <p class="results-count">共找到 <strong>{{ courses|length }}</strong> 門課程</p>
+    <p class="results-count">共找到 <strong>{{ total_count }}</strong> 門課程</p>
     
     {% if courses %}
     <div class="course-table-wrapper">
@@ -102,14 +102,14 @@
                             <form method="post" action="{% url 'drop_course' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                                <input type="hidden" name="next" value="course_list">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
                             </form>
                         {% elif course.can_enroll %}
                             <form method="post" action="{% url 'enroll_course' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                                <input type="hidden" name="next" value="course_list">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-primary btn-sm">選課</button>
                             </form>
                         {% else %}
@@ -120,14 +120,14 @@
                             <form method="post" action="{% url 'remove_favorite' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                                <input type="hidden" name="next" value="course_list">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="取消收藏">★</button>
                             </form>
                         {% else %}
                             <form method="post" action="{% url 'add_favorite' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                                <input type="hidden" name="next" value="course_list">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
                                 <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="收藏課程">☆</button>
                             </form>
                         {% endif %}
@@ -143,6 +143,23 @@
             </tbody>
         </table>
     </div>
+    {% if page_obj.has_other_pages %}
+    <nav class="pagination" aria-label="課程清單分頁">
+        {% if page_obj.has_previous %}
+        <a class="btn btn-secondary btn-sm" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">上一頁</a>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if num == page_obj.number %}
+            <span class="btn btn-primary btn-sm" aria-current="page">{{ num }}</span>
+            {% else %}
+            <a class="btn btn-secondary btn-sm" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <a class="btn btn-secondary btn-sm" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">下一頁</a>
+        {% endif %}
+    </nav>
+    {% endif %}
     {% else %}
     <div class="empty-state">
         <p>找不到符合條件的課程，請嘗試其他搜尋條件。</p>
