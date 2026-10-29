@@ -153,12 +153,31 @@ def progress(request):
     summary = course_store.get_graduation_summary(user_id)
     total = summary["total_required"] or 1
     summary["percent"] = min(100, round(summary["earned_total"] * 100 / total))
+
+    history = course_store.get_study_history(user_id)
+    semesters = sorted({row["semester"] for row in history}, reverse=True)
+    status_filter = request.GET.get("status", "")
+    semester_filter = request.GET.get("semester", "")
+    if status_filter:
+        history = [row for row in history if row["status"] == status_filter]
+    if semester_filter:
+        history = [row for row in history if row["semester"] == semester_filter]
+    history_page = Paginator(history, 10).get_page(request.GET.get("page", 1))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+
     return render(
         request,
         "progress.html",
         {
             "summary": summary,
             "module_summary": course_store.get_module_summary(user_id),
+            "history_page": history_page,
+            "history_total": len(history),
+            "semesters": semesters,
+            "status_filter": status_filter,
+            "semester_filter": semester_filter,
+            "history_query": query_params.urlencode(),
         },
     )
 

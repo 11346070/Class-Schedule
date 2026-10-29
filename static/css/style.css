@@ -269,6 +269,14 @@ body {
     height: 42px;
 }
 
+.history-filter {
+    margin: 1rem 0;
+}
+
+.history-filter .form-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .progress-track {
     height: 0.65rem;
     background-color: var(--border-color);
@@ -1364,5 +1372,9 @@ body {
     .schedule-table {
         min-width: 550px;
         font-size: 0.625rem;
+    }
+
+    .history-filter .form-row {
+        grid-template-columns: 1fr;
     }
 }

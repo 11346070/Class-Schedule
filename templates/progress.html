@@ -61,4 +61,91 @@
         {% endif %}
     </div>
 </div>
+
+<div class="detail-card stack-card">
+    <h2>歷年修課紀錄</h2>
+    <p class="lead">已通過、未通過，以及本學期正在修的課。歷年成績由管理員登錄。</p>
+    <form method="get" action="{% url 'progress' %}" class="search-form history-filter">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="semester">學期</label>
+                <select id="semester" name="semester" class="form-control">
+                    <option value="">全部</option>
+                    {% for semester in semesters %}
+                    <option value="{{ semester }}" {% if semester_filter == semester %}selected{% endif %}>{{ semester }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="status">狀態</label>
+                <select id="status" name="status" class="form-control">
+                    <option value="">全部</option>
+                    <option value="passed" {% if status_filter == "passed" %}selected{% endif %}>已通過</option>
+                    <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>未通過</option>
+                    <option value="in_progress" {% if status_filter == "in_progress" %}selected{% endif %}>正在修</option>
+                </select>
+            </div>
+            <div class="form-group button-group">
+                <button type="submit" class="btn btn-primary">篩選</button>
+                <a href="{% url 'progress' %}" class="btn btn-secondary">清除</a>
+            </div>
+        </div>
+    </form>
+    <p class="results-count">共 <strong>{{ history_total }}</strong> 筆</p>
+    {% if history_total %}
+    <div class="course-table-wrapper">
+        <table class="course-table">
+            <thead>
+                <tr>
+                    <th>學期</th>
+                    <th>課程編號</th>
+                    <th>課程名稱</th>
+                    <th>學分</th>
+                    <th>類型</th>
+                    <th>狀態</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in history_page %}
+                <tr>
+                    <td>{{ row.semester }}</td>
+                    <td>{{ row.course_code }}</td>
+                    <td>
+                        {% if row.detail_id %}
+                        <a href="{% url 'course_detail' row.detail_id %}">{{ row.course_name }}</a>
+                        {% else %}
+                        {{ row.course_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ row.credits }}</td>
+                    <td><span class="course-type-badge badge-{{ row.course_type }}">{{ row.course_type }}</span></td>
+                    <td>{{ row.status_label }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if history_page.has_other_pages %}
+    <nav class="pagination" aria-label="歷年紀錄分頁">
+        {% if history_page.has_previous %}
+        <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ history_page.previous_page_number }}">上一頁</a>
+        {% endif %}
+        {% for num in history_page.paginator.page_range %}
+            {% if num == history_page.number %}
+            <span class="btn btn-primary btn-sm">{{ num }}</span>
+            {% else %}
+            <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if history_page.has_next %}
+        <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ history_page.next_page_number }}">下一頁</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <p>目前沒有符合條件的修課紀錄。</p>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

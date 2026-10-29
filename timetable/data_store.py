@@ -437,6 +437,39 @@ class CourseDataStore:
             "overflow": max(other_passed - cap, 0),
         }
 
+    def get_study_history(self, user_id: str) -> List[dict]:
+        """歷年紀錄加上本學期選課（顯示為正在修）。"""
+        self.ensure_seeded()
+        rows = []
+        for record in StudyRecord.objects.filter(user_id=user_id):
+            rows.append({
+                "semester": record.semester,
+                "course_code": record.course_code,
+                "course_name": record.course_name,
+                "credits": record.credits,
+                "course_type": record.course_type,
+                "status": record.status,
+                "status_label": record.get_status_display(),
+            })
+        for course in self.get_user_enrollments(user_id):
+            rows.append({
+                "semester": "本學期",
+                "course_code": course.course_id,
+                "course_name": course.name,
+                "credits": course.credits,
+                "course_type": course.course_type,
+                "status": StudyRecord.STATUS_IN_PROGRESS,
+                "status_label": "正在修",
+            })
+        codes = {row["course_code"] for row in rows}
+        existing = set(
+            Course.objects.filter(course_id__in=codes).values_list("course_id", flat=True)
+        )
+        for row in rows:
+            row["detail_id"] = row["course_code"] if row["course_code"] in existing else ""
+        rows.sort(key=lambda row: (row["semester"], row["course_code"]), reverse=True)
+        return rows
+
     def get_user_total_credits(self, user_id: str) -> int:
         enrolled_courses = self.get_user_enrollments(user_id)
         return sum(course.credits for course in enrolled_courses)
