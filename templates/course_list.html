@@ -97,6 +97,7 @@
                     </td>
                     <td class="col-actions">
                         <div class="course-actions">
+                        {% if user.is_authenticated %}
                         {% if course.is_enrolled %}
                             <form method="post" action="{% url 'drop_course' %}">
                                 {% csrf_token %}
@@ -129,6 +130,9 @@
                                 <input type="hidden" name="next" value="course_list">
                                 <button type="submit" class="btn btn-secondary btn-sm btn-icon" title="收藏課程">☆</button>
                             </form>
+                        {% endif %}
+                        {% else %}
+                            <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-primary btn-sm">登入後選課</a>
                         {% endif %}
 
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>

@@ -29,4 +29,9 @@ urlpatterns = [
     
     # 取消收藏操作
     path('favorites/remove/', views.remove_favorite, name='remove_favorite'),
+
+    # 登入／註冊（登入狀態存在 SQLite session，不使用 sessions 資料夾）
+    path('login/', views.StyledLoginView.as_view(), name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.register, name='register'),
 ]

@@ -2,42 +2,73 @@
 Views - 處理所有網頁請求與選課操作
 """
 
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_http_methods, require_POST
+
 from .data_store import course_store
+from .forms import RegisterForm, StyledAuthenticationForm
+
+
+class StyledLoginView(LoginView):
+    template_name = "login.html"
+    authentication_form = StyledAuthenticationForm
+    redirect_authenticated_user = True
+
+
+@require_POST
+def logout_view(request):
+    logout(request)
+    messages.success(request, "已登出")
+    return redirect("login")
+
+
+def register(request):
+    """註冊帳號，成功後直接登入。"""
+    if request.user.is_authenticated:
+        return redirect("index")
+
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, "註冊成功，已為你登入")
+            return redirect("index")
+    else:
+        form = RegisterForm()
+
+    return render(request, "register.html", {"form": form})
 
 
 def get_user_id(request):
-    """
-    取得使用者 ID
-    使用 Session 識別不同使用者
-    """
-    if 'user_id' not in request.session:
-        # 使用 session_key 作為 user_id
-        if not request.session.session_key:
-            request.session.create()
-        request.session['user_id'] = request.session.session_key
-    
-    return request.session['user_id']
+    """已登入使用者以帳號主鍵當選課識別，資料存在 SQLite。"""
+    if not request.user.is_authenticated:
+        return ""
+    return str(request.user.pk)
 
 
-def courses_with_enroll_status(user_id, courses, enrolled_course_ids):
+def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authenticated=True):
     """為清單上的每門課附上是否已選，以及選不了的原因。"""
     courses_with_status = []
     for course in courses:
         course_dict = course.to_dict()
-        course_dict['is_enrolled'] = course.course_id in enrolled_course_ids
-        if course_dict['is_enrolled']:
-            course_dict['can_enroll'] = False
-            course_dict['enroll_message'] = '已選修'
+        course_dict["is_enrolled"] = course.course_id in enrolled_course_ids
+        if not authenticated:
+            course_dict["can_enroll"] = False
+            course_dict["enroll_message"] = "請先登入"
+        elif course_dict["is_enrolled"]:
+            course_dict["can_enroll"] = False
+            course_dict["enroll_message"] = "已選修"
         else:
             can_enroll, message = course_store.check_enrollment_eligibility(
                 user_id, course.course_id
             )
-            course_dict['can_enroll'] = can_enroll
-            course_dict['enroll_message'] = message
+            course_dict["can_enroll"] = can_enroll
+            course_dict["enroll_message"] = message
         courses_with_status.append(course_dict)
     return courses_with_status
 
@@ -56,6 +87,7 @@ def redirect_after_action(request, default='course_list'):
     return redirect(next_url)
 
 
+@login_required
 @require_http_methods(["GET"])
 def index(request):
     """首頁 - 顯示課表總覽"""
@@ -126,7 +158,10 @@ def course_list(request):
     favorited_course_ids = {c.course_id for c in course_store.get_user_favorites(user_id)}
     
     courses_with_status = courses_with_enroll_status(
-        user_id, courses, enrolled_course_ids
+        user_id,
+        courses,
+        enrolled_course_ids,
+        authenticated=request.user.is_authenticated,
     )
     for course_dict in courses_with_status:
         course_dict['is_favorited'] = course_dict['course_id'] in favorited_course_ids
@@ -147,6 +182,7 @@ def course_list(request):
     return render(request, 'course_list.html', context)
 
 
+@login_required
 @require_POST
 def enroll_course(request):
     """選課操作"""
@@ -169,6 +205,7 @@ def enroll_course(request):
     return redirect_after_action(request, default='course_list')
 
 
+@login_required
 @require_POST
 def drop_course(request):
     """退選課程操作"""
@@ -201,12 +238,13 @@ def course_detail(request, course_id):
         messages.error(request, '課程不存在')
         return redirect('course_list')
     
-    is_enrolled = course_store.is_user_enrolled(user_id, course_id)
-    is_favorited = course_store.is_course_favorited(user_id, course_id)
-    
+    authenticated = request.user.is_authenticated
+    is_enrolled = authenticated and course_store.is_user_enrolled(user_id, course_id)
+    is_favorited = authenticated and course_store.is_course_favorited(user_id, course_id)
+
     # 檢查是否有時間衝突
     conflict_course = None
-    if not is_enrolled:
+    if authenticated and not is_enrolled:
         enrolled_courses = course_store.get_user_enrollments(user_id)
         for existing_course in enrolled_courses:
             if existing_course.weekday == course.weekday:
@@ -216,9 +254,11 @@ def course_detail(request, course_id):
                 ):
                     conflict_course = existing_course
                     break
-    
-    # 選課前預檢
-    can_enroll, enroll_message = course_store.check_enrollment_eligibility(user_id, course_id)
+
+    if not authenticated:
+        can_enroll, enroll_message = False, "請先登入後再選課"
+    else:
+        can_enroll, enroll_message = course_store.check_enrollment_eligibility(user_id, course_id)
     
     course_dict = course.to_dict()
     
@@ -234,6 +274,7 @@ def course_detail(request, course_id):
     return render(request, 'course_detail.html', context)
 
 
+@login_required
 @require_POST
 def add_favorite(request):
     """收藏課程操作"""
@@ -256,6 +297,7 @@ def add_favorite(request):
     return redirect_after_action(request, default='course_list')
 
 
+@login_required
 @require_POST
 def remove_favorite(request):
     """取消收藏課程操作"""
@@ -278,6 +320,7 @@ def remove_favorite(request):
     return redirect_after_action(request, default='favorites')
 
 
+@login_required
 @require_http_methods(["GET"])
 def favorites(request):
     """收藏清單頁"""

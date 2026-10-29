@@ -90,11 +90,15 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 
-# Session（檔案式；前台選課使用者識別）
-SESSION_ENGINE = 'django.contrib.sessions.backends.file'
-SESSION_FILE_PATH = BASE_DIR / 'sessions'
+# Session 存在 SQLite（django_session），不使用 sessions/ 資料夾。
+# 登入狀態跟著資料庫走，clone 後不會因為找不到 session 檔而啟動失敗。
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400
 SESSION_SAVE_EVERY_REQUEST = True
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'index'
+LOGOUT_REDIRECT_URL = 'login'
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

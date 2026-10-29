@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}登入 - 個人課表維護系統{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="page-header">
+        <h1>登入</h1>
+        <p class="lead">使用帳號登入後即可選課與查看個人課表</p>
+    </div>
+    <div class="detail-card auth-card">
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">帳號</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">密碼</label>
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+            <button type="submit" class="btn btn-primary">登入</button>
+        </form>
+        <p class="auth-switch">還沒有帳號？<a href="{% url 'register' %}">去註冊</a></p>
+    </div>
+</div>
+{% endblock %}
