@@ -51,6 +51,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    const account = document.getElementById("account-menu");
+    const accountBtn = document.getElementById("account-btn");
+    if (account && accountBtn) {
+        accountBtn.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const open = account.classList.toggle("is-open");
+            accountBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        document.addEventListener("click", function (event) {
+            if (!account.contains(event.target)) {
+                account.classList.remove("is-open");
+                accountBtn.setAttribute("aria-expanded", "false");
+            }
+        });
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                account.classList.remove("is-open");
+                accountBtn.setAttribute("aria-expanded", "false");
+            }
+        });
+    }
+
     // 自動隱藏訊息提示
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(function(alert) {

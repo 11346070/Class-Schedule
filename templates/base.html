@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}個人課表維護系統{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261029j">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261029k">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -13,7 +13,12 @@
     <nav class="navbar">
         <div class="container">
             <div class="nav-brand">
-                <a href="{% url 'index' %}">📚 個人課表維護系統</a>
+                <a href="{% url 'index' %}">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="4.5" width="17" height="16" rx="2"></rect><path d="M3.5 9.5h17M8 4.5v5"></path></svg>
+                    </span>
+                    個人課表維護系統
+                </a>
             </div>
             <button type="button" class="nav-toggle" aria-label="切換導覽選單" aria-expanded="false" aria-controls="main-nav">
                 <span></span>
@@ -21,19 +26,23 @@
                 <span></span>
             </button>
             <ul class="nav-menu" id="main-nav">
+                {% if user.is_authenticated %}
+                <li class="mobile-profile">
+                    <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+                    <span class="who"><strong>{{ user.username }}</strong><span>已登入</span></span>
+                </li>
+                {% endif %}
                 <li><a href="{% url 'index' %}" {% if request.path == '/' %}class="active"{% endif %}>首頁</a></li>
                 <li><a href="{% url 'course_list' %}" {% if 'courses' in request.path and 'my-courses' not in request.path %}class="active"{% endif %}>課程清單</a></li>
                 <li><a href="{% url 'favorites' %}" {% if 'favorites' in request.path %}class="active"{% endif %}>收藏清單</a></li>
                 {% if user.is_authenticated %}
                 <li><a href="{% url 'progress' %}" {% if request.path == '/progress/' %}class="active"{% endif %}>修課進度</a></li>
-                <li><a href="{% url 'account_settings' %}" {% if request.path == '/settings/' %}class="active"{% endif %}>個人設定</a></li>
-                {% endif %}
-                {% if user.is_authenticated %}
-                <li><span class="nav-user">{{ user.username }}</span></li>
-                <li>
+                <li class="menu-split" aria-hidden="true"></li>
+                <li class="mobile-only"><a href="{% url 'account_settings' %}" {% if request.path == '/settings/' %}class="active"{% endif %}>個人設定</a></li>
+                <li class="mobile-only">
                     <form method="post" action="{% url 'logout' %}" class="nav-logout-form">
                         {% csrf_token %}
-                        <button type="submit" class="nav-link-btn">登出</button>
+                        <button type="submit" class="nav-link-btn danger">登出</button>
                     </form>
                 </li>
                 {% else %}
@@ -41,6 +50,21 @@
                 <li><a href="{% url 'register' %}" {% if request.path == '/register/' %}class="active"{% endif %}>註冊</a></li>
                 {% endif %}
             </ul>
+            {% if user.is_authenticated %}
+            <div class="account" id="account-menu">
+                <button type="button" class="account-btn" id="account-btn" aria-haspopup="true" aria-expanded="false">
+                    <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+                    <span class="account-name">{{ user.username }}</span>
+                </button>
+                <div class="account-menu">
+                    <a href="{% url 'account_settings' %}">個人設定</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="danger">登出</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </nav>
     {% endblock %}
@@ -77,7 +101,7 @@
     </footer>
     {% endblock %}
 
-    <script src="/static/js/main.js?v=20261029j"></script>
+    <script src="/static/js/main.js?v=20261029k"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
