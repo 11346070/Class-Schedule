@@ -2,8 +2,6 @@
 
 {% block title %}課程清單 - 個人課表維護系統{% endblock %}
 
-{% block container_class %}container-wide{% endblock %}
-
 {% block content %}
 <div class="page-header">
     <h1>課程清單</h1>
@@ -74,23 +72,23 @@
             <tbody>
                 {% for course in courses %}
                 <tr class="{% if course.is_enrolled %}enrolled-row{% endif %} {% if course.is_full %}full-row{% endif %}">
-                    <td>{{ course.course_id }}</td>
-                    <td>
+                    <td data-label="課程編號">{{ course.course_id }}</td>
+                    <td data-label="課程名稱">
                         <strong>{{ course.name }}</strong>
                         {% if course.review_summary %}
                         <small class="review-summary">作業{{ course.review_summary.homework }} · 考試{{ course.review_summary.exam }}</small>
                         {% endif %}
                     </td>
-                    <td>{{ course.teacher }}</td>
-                    <td>{{ course.time_display }}</td>
-                    <td>{{ course.credits }}</td>
-                    <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
-                    <td>
+                    <td data-label="授課教師">{{ course.teacher }}</td>
+                    <td data-label="時間">{{ course.time_display }}</td>
+                    <td data-label="學分">{{ course.credits }}</td>
+                    <td data-label="類型"><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
+                    <td data-label="名額">
                         <span class="quota-info {% if course.is_full %}quota-full{% elif course.remaining_quota < 5 %}quota-low{% endif %}">
                             {{ course.remaining_quota }}/{{ course.total_quota }}
                         </span>
                     </td>
-                    <td class="col-status">
+                    <td class="col-status" data-label="狀態">
                         <div class="course-status-block">
                             {% if course.is_enrolled %}
                             <span class="badge badge-success">已選課</span>
@@ -102,7 +100,7 @@
                             {% endif %}
                         </div>
                     </td>
-                    <td class="col-actions">
+                    <td class="col-actions" data-label="操作">
                         <div class="course-actions">
                         {% if user.is_authenticated %}
                         {% if course.is_enrolled %}

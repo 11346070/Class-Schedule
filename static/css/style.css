@@ -562,14 +562,24 @@ body {
 
 /* === 課程清單：狀態與操作欄 === */
 .course-table-wrapper {
-    overflow-x: auto;
+    overflow-x: visible;
 }
 
 .course-table.course-list-table {
     width: 100%;
     min-width: 0;
-    table-layout: auto;
+    table-layout: fixed;
 }
+
+.course-table.course-list-table th:nth-child(1) { width: 8%; }
+.course-table.course-list-table th:nth-child(2) { width: 16%; }
+.course-table.course-list-table th:nth-child(3) { width: 9%; }
+.course-table.course-list-table th:nth-child(4) { width: 11%; }
+.course-table.course-list-table th:nth-child(5) { width: 5%; }
+.course-table.course-list-table th:nth-child(6) { width: 7%; }
+.course-table.course-list-table th:nth-child(7) { width: 7%; }
+.course-table.course-list-table th:nth-child(8) { width: 17%; }
+.course-table.course-list-table th:nth-child(9) { width: 20%; }
 
 .course-table.course-list-table th,
 .course-table.course-list-table td {
@@ -644,6 +654,13 @@ body {
     width: 2.25rem;
     min-width: 2.25rem;
     padding: 0;
+}
+
+@media (max-width: 1100px) {
+    .course-actions .btn {
+        min-width: 3.25rem;
+        padding: 0 0.55rem;
+    }
 }
 
 .course-actions .btn:disabled,
@@ -1219,8 +1236,51 @@ body {
     }
     
     .course-table {
-        min-width: 600px;
+        min-width: 0;
         font-size: 0.875rem;
+    }
+
+    .course-table.course-list-table thead { display: none; }
+    .course-table.course-list-table,
+    .course-table.course-list-table tbody,
+    .course-table.course-list-table tr { display: block; }
+    .course-table.course-list-table tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+    }
+    .course-table.course-list-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        width: auto;
+        border: 0;
+    }
+    .course-table.course-list-table td::before {
+        content: attr(data-label);
+        flex: 0 0 4.5rem;
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+    .course-table.course-list-table td[data-label="課程名稱"],
+    .course-table.course-list-table td[data-label="操作"] { display: block; }
+    .course-table.course-list-table td[data-label="課程名稱"]::before,
+    .course-table.course-list-table td[data-label="操作"]::before { content: none; }
+    .course-table.course-list-table td[data-label="課程名稱"] { font-size: 1rem; padding-top: 12px; }
+    .course-table.course-list-table td[data-label="操作"] {
+        border-top: 1px solid var(--border-color);
+        margin-top: 6px;
+    }
+
+    .course-table-wrapper:has(.course-list-table) {
+        overflow-x: visible;
+    }
+
+    .course-table.course-list-table .course-actions {
+        flex-wrap: wrap;
     }
     
     .course-table th,
