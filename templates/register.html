@@ -1,39 +1,61 @@
 {% extends 'base.html' %}
 
 {% block title %}註冊 - 個人課表維護系統{% endblock %}
+{% block site_nav %}{% endblock %}
+{% block site_footer %}{% endblock %}
 
-{% block content %}
-<div class="auth-wrap">
-    <div class="page-header">
-        <h1>註冊</h1>
-        <p class="lead">建立帳號後即可選課與查看個人課表</p>
+{% block main %}
+<section class="auth-screen">
+    <aside class="auth-aside">
+        <h1>建立帳號</h1>
+        <p>密碼規則與系統現有的驗證器相同。</p>
+        <ul>
+            <li>至少 8 個字元</li>
+            <li>不可全部為數字</li>
+            <li>不可與帳號太相似，也不可為常見密碼</li>
+        </ul>
+    </aside>
+    <div class="auth-panel">
+        <div class="auth-card">
+            <div class="mobile-auth-brand">個人課表維護系統</div>
+            <h1>註冊</h1>
+            <p class="lead">建立帳號後即可選課與查看個人課表</p>
+            <form method="post" action="{% url 'register' %}">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">帳號</label>
+                    {{ form.username }}
+                    {{ form.username.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.password1.id_for_label }}">密碼</label>
+                    <div class="input-wrap">
+                        {{ form.password1 }}
+                        <button type="button" class="text-btn js-reveal" data-target="{{ form.password1.id_for_label }}">顯示</button>
+                    </div>
+                    <ul class="password-rules" id="register-password-rules">
+                        <li data-rule="length">至少 8 個字元</li>
+                        <li data-rule="numeric">不可全部為數字</li>
+                        <li>不可與帳號太相似（送出時檢查）</li>
+                        <li>不可為常見密碼（送出時檢查）</li>
+                    </ul>
+                    {{ form.password1.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.password2.id_for_label }}">確認密碼</label>
+                    <div class="input-wrap">
+                        {{ form.password2 }}
+                        <button type="button" class="text-btn js-reveal" data-target="{{ form.password2.id_for_label }}">顯示</button>
+                    </div>
+                    {{ form.password2.errors }}
+                </div>
+                <button type="submit" class="btn btn-primary">註冊</button>
+            </form>
+            <p class="auth-switch">已經有帳號？<a href="{% url 'login' %}">去登入</a></p>
+        </div>
     </div>
-    <div class="detail-card auth-card">
-        <form method="post" action="{% url 'register' %}">
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors }}
-            </div>
-            {% endif %}
-            <div class="form-group">
-                <label for="{{ form.username.id_for_label }}">帳號</label>
-                {{ form.username }}
-                {{ form.username.errors }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.password1.id_for_label }}">密碼</label>
-                {{ form.password1 }}
-                {{ form.password1.errors }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.password2.id_for_label }}">確認密碼</label>
-                {{ form.password2 }}
-                {{ form.password2.errors }}
-            </div>
-            <button type="submit" class="btn btn-primary">註冊</button>
-        </form>
-        <p class="auth-switch">已經有帳號？<a href="{% url 'login' %}">去登入</a></p>
-    </div>
-</div>
+</section>
 {% endblock %}

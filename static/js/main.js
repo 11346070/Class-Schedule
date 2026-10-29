@@ -75,6 +75,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    document.querySelectorAll("[data-password-rules]").forEach(function (input) {
+        const list = document.getElementById(input.getAttribute("data-password-rules"));
+        if (!list) return;
+        const lengthItem = list.querySelector('[data-rule="length"]');
+        const numericItem = list.querySelector('[data-rule="numeric"]');
+        input.addEventListener("input", function () {
+            const value = input.value;
+            const started = value.length > 0;
+            setPasswordRule(lengthItem, started, value.length >= 8);
+            setPasswordRule(numericItem, started, !/^\d+$/.test(value));
+        });
+    });
+
+    document.querySelectorAll(".js-reveal").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const field = document.getElementById(button.getAttribute("data-target"));
+            if (!field) return;
+            const show = field.type === "password";
+            field.type = show ? "text" : "password";
+            button.textContent = show ? "隱藏" : "顯示";
+        });
+    });
+
     // 確認對話框樣式增強
     const confirmButtons = document.querySelectorAll('[onclick*="confirm"]');
     confirmButtons.forEach(function(btn) {
@@ -83,6 +106,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function setPasswordRule(item, started, ok) {
+    if (!item) return;
+    item.classList.toggle("is-met", started && ok);
+    item.classList.toggle("is-unmet", started && !ok);
+}
 
 // 工具函數：格式化時間
 function formatTime(weekday, startPeriod, endPeriod) {

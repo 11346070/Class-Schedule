@@ -22,6 +22,7 @@ class RegisterForm(UserCreationForm):
         self.fields["username"].label = "帳號"
         self.fields["password1"].label = "密碼"
         self.fields["password2"].label = "確認密碼"
+        self.fields["password1"].widget.attrs["data-password-rules"] = "register-password-rules"
         for field in self.fields.values():
             field.help_text = ""
             field.widget.attrs["class"] = "form-control"
