@@ -89,7 +89,7 @@ class CourseReviewAdmin(admin.ModelAdmin):
 
 @admin.register(StudentProfile)
 class StudentProfileAdmin(admin.ModelAdmin):
-    list_display = ("user_id", "module")
+    list_display = ("user_id", "module", "notify_at_floor", "notify_near_floor", "notify_at_limit")
     search_fields = ("user_id",)
     list_filter = ("module",)
 

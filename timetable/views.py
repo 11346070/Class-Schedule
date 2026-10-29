@@ -155,6 +155,7 @@ def index(request):
         'remaining_credits': max(credit_limit - total_credits, 0),
         'credit_percent': min(100, round(total_credits * 100 / credit_limit)) if credit_limit else 0,
         'floor_percent': min(100, round(credit_floor * 100 / credit_limit)) if credit_limit else 0,
+        **course_store.get_notification_prefs(user_id),
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
         'weekdays': [
@@ -187,6 +188,10 @@ def account_settings(request):
         else:
             messages.error(request, "請選擇金融或資訊模組")
         return redirect("account_settings")
+    elif request.method == "POST" and request.POST.get("action") == "notifications":
+        course_store.set_notification_prefs(user_id, request.POST)
+        messages.success(request, "已更新首頁提醒")
+        return redirect("account_settings")
 
     return render(
         request,
@@ -196,6 +201,7 @@ def account_settings(request):
             "credit_limit": course_store.get_user_credit_limit(user_id),
             "credit_floor": course_store.get_user_credit_floor(user_id),
             "module": course_store.get_student_module(user_id),
+            **course_store.get_notification_prefs(user_id),
         },
     )
 

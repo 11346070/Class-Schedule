@@ -18,12 +18,14 @@
             <p class="lead">已選 {{ enrolled_count }} 門 · 還可再選 {{ remaining_credits }} 學分</p>
         </div>
         <div class="overview-side">
-            {% if enrolled_count and total_credits <= credit_floor %}
-            <span class="pill pill-warn">已達退選下限</span>
+            {% if total_credits > credit_limit %}
+            <span class="pill pill-warn">超過學分上限</span>
+            {% elif enrolled_count and total_credits <= credit_floor %}
+                {% if notify_at_floor %}<span class="pill pill-warn">已達退選下限</span>{% endif %}
             {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
-            <span class="pill pill-warn">接近退選下限</span>
+                {% if notify_near_floor %}<span class="pill pill-warn">接近退選下限</span>{% endif %}
             {% elif total_credits >= credit_limit %}
-            <span class="pill pill-warn">已達學分上限</span>
+                {% if notify_at_limit %}<span class="pill pill-warn">已達學分上限</span>{% endif %}
             {% else %}
             <span class="pill pill-ok">高於退選下限</span>
             {% endif %}
@@ -39,10 +41,15 @@
         <span style="left: {{ floor_percent }}%;">退選下限 {{ credit_floor }}</span>
         <span>上限 {{ credit_limit }}</span>
     </div>
-    {% if enrolled_count and total_credits <= credit_floor %}
+    {% if total_credits > credit_limit %}
+    <p class="credit-note">目前學分已超過上限。新的選課仍會被上限擋住，如需調整請聯絡管理員。</p>
+    {% endif %}
+    {% if enrolled_count and total_credits <= credit_floor and notify_at_floor %}
     <p class="credit-note">已達最低學分，無法再自行退選。如需退選，請聯絡管理員。</p>
-    {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
+    {% elif enrolled_count and total_credits <= credit_floor|add:3 and notify_near_floor %}
     <p class="credit-note">接近最低學分。退到下限以下時，只能請管理員協助退選。</p>
+    {% elif total_credits == credit_limit and notify_at_limit %}
+    <p class="credit-note">已達學分上限，無法再選會超過上限的課。</p>
     {% endif %}
 </section>
 

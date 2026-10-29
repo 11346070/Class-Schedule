@@ -405,6 +405,24 @@ class CourseDataStore:
         )
         return True
 
+    def get_notification_prefs(self, user_id: str) -> dict:
+        profile, _ = StudentProfile.objects.get_or_create(user_id=user_id)
+        return {
+            "notify_at_floor": profile.notify_at_floor,
+            "notify_near_floor": profile.notify_near_floor,
+            "notify_at_limit": profile.notify_at_limit,
+        }
+
+    def set_notification_prefs(self, user_id: str, posted) -> None:
+        StudentProfile.objects.update_or_create(
+            user_id=user_id,
+            defaults={
+                "notify_at_floor": posted.get("notify_at_floor") == "on",
+                "notify_near_floor": posted.get("notify_near_floor") == "on",
+                "notify_at_limit": posted.get("notify_at_limit") == "on",
+            },
+        )
+
     def get_module_summary(self, user_id: str) -> dict:
         """另一模組已通過學分，最多認列到上限，超出部分不計。"""
         self._ensure_module_courses()

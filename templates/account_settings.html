@@ -8,52 +8,108 @@
     <p class="lead">帳號 {{ user.username }}</p>
 </div>
 
-<div class="detail-card">
-    <h2>修改密碼</h2>
-    <form method="post" action="{% url 'account_settings' %}" class="settings-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="password">
-        {% for field in password_form %}
-        <div class="form-group">
-            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-            {{ field }}
-            {{ field.errors }}
+<div class="settings-grid">
+    <div class="settings-col">
+        <div class="detail-card">
+            <h2>修改密碼</h2>
+            <form method="post" action="{% url 'account_settings' %}" class="settings-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="password">
+                {{ password_form.non_field_errors }}
+                <div class="form-group">
+                    <label for="{{ password_form.old_password.id_for_label }}">目前密碼</label>
+                    <div class="input-wrap">
+                        {{ password_form.old_password }}
+                        <button type="button" class="text-btn js-reveal" data-target="{{ password_form.old_password.id_for_label }}">顯示</button>
+                    </div>
+                    {{ password_form.old_password.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ password_form.new_password1.id_for_label }}">新密碼</label>
+                    <div class="input-wrap">
+                        {{ password_form.new_password1 }}
+                        <button type="button" class="text-btn js-reveal" data-target="{{ password_form.new_password1.id_for_label }}">顯示</button>
+                    </div>
+                    <ul class="password-rules" id="settings-password-rules">
+                        <li data-rule="length">至少 8 個字元</li>
+                        <li data-rule="numeric">不可全部為數字</li>
+                        <li>不可與帳號太相似（送出時檢查）</li>
+                        <li>不可為常見密碼（送出時檢查）</li>
+                    </ul>
+                    {{ password_form.new_password1.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ password_form.new_password2.id_for_label }}">確認新密碼</label>
+                    <div class="input-wrap">
+                        {{ password_form.new_password2 }}
+                        <button type="button" class="text-btn js-reveal" data-target="{{ password_form.new_password2.id_for_label }}">顯示</button>
+                    </div>
+                    {{ password_form.new_password2.errors }}
+                </div>
+                <button type="submit" class="btn btn-primary">更新密碼</button>
+            </form>
         </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary">更新密碼</button>
-    </form>
-</div>
 
-<div class="detail-card stack-card">
-    <h2>本學期學分規則</h2>
-    <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-label">學分上限</span>
-            <span class="stat-value">{{ credit_limit }}</span>
+        <form method="post" action="{% url 'logout' %}" class="logout-row" onsubmit="return confirm('確定要登出嗎？');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline">登出</button>
+        </form>
+    </div>
+
+    <div class="settings-col">
+        <div class="detail-card">
+            <h2>本學期學分規則</h2>
+            <dl class="readonly-list">
+                <div>
+                    <dt>學分上限</dt>
+                    <dd>{{ credit_limit }}</dd>
+                </div>
+                <div>
+                    <dt>退選下限</dt>
+                    <dd>{{ credit_floor }}</dd>
+                </div>
+            </dl>
+            <p class="credit-note">上下限由管理員設定。退選後若低於下限，只能請管理員協助退選。</p>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">學分下限</span>
-            <span class="stat-value">{{ credit_floor }}</span>
+
+        <div class="detail-card stack-card">
+            <h2>首頁提醒</h2>
+            <p class="lead">只決定首頁要不要顯示提醒，不會改變選課或退選規則。</p>
+            <form method="post" action="{% url 'account_settings' %}" class="notice-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="notifications">
+                <label class="toggle-row">
+                    <span>已達退選下限時提醒</span>
+                    <input type="checkbox" name="notify_at_floor" {% if notify_at_floor %}checked{% endif %} onchange="this.form.requestSubmit()">
+                </label>
+                <label class="toggle-row">
+                    <span>接近退選下限時提醒</span>
+                    <input type="checkbox" name="notify_near_floor" {% if notify_near_floor %}checked{% endif %} onchange="this.form.requestSubmit()">
+                </label>
+                <label class="toggle-row">
+                    <span>已達學分上限時提醒</span>
+                    <input type="checkbox" name="notify_at_limit" {% if notify_at_limit %}checked{% endif %} onchange="this.form.requestSubmit()">
+                </label>
+            </form>
+        </div>
+
+        <div class="detail-card stack-card">
+            <h2>主修模組</h2>
+            <form method="post" action="{% url 'account_settings' %}" class="module-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="module">
+                <div class="form-group">
+                    <label for="module">模組</label>
+                    <select id="module" name="module" class="form-control">
+                        <option value="">請選擇</option>
+                        <option value="資訊" {% if module == "資訊" %}selected{% endif %}>資訊</option>
+                        <option value="金融" {% if module == "金融" %}selected{% endif %}>金融</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
+            </form>
+            <p>另一模組最多可認列的學分，會顯示在<a href="{% url 'progress' %}">修課進度</a>。</p>
         </div>
     </div>
-    <p class="credit-note">上下限由管理員設定。退選後若低於下限，只能請管理員協助退選。</p>
-</div>
-
-<div class="detail-card stack-card">
-    <h2>主修模組</h2>
-    <form method="post" action="{% url 'account_settings' %}" class="module-form">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="module">
-        <div class="form-group">
-            <label for="module">模組</label>
-            <select id="module" name="module" class="form-control">
-                <option value="">請選擇</option>
-                <option value="資訊" {% if module == "資訊" %}selected{% endif %}>資訊</option>
-                <option value="金融" {% if module == "金融" %}selected{% endif %}>金融</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
-    </form>
-    <p>另一模組最多可認列的學分，會顯示在<a href="{% url 'progress' %}">修課進度</a>。</p>
 </div>
 {% endblock %}

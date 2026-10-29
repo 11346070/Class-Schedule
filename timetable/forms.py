@@ -34,6 +34,7 @@ class StyledPasswordChangeForm(PasswordChangeForm):
         self.fields["old_password"].label = "目前密碼"
         self.fields["new_password1"].label = "新密碼"
         self.fields["new_password2"].label = "確認新密碼"
+        self.fields["new_password1"].widget.attrs["data-password-rules"] = "settings-password-rules"
         for field in self.fields.values():
             field.help_text = ""
             field.widget.attrs["class"] = "form-control"

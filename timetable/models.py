@@ -235,6 +235,9 @@ class StudentProfile(models.Model):
     """學生選擇的主修模組。另一模組學分最多認列到上限。"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)
     module = models.CharField("主修模組", max_length=20, blank=True, default="")
+    notify_at_floor = models.BooleanField("已達退選下限時提醒", default=True)
+    notify_near_floor = models.BooleanField("接近退選下限時提醒", default=True)
+    notify_at_limit = models.BooleanField("已達學分上限時提醒", default=True)
 
     class Meta:
         verbose_name = "學生模組"
