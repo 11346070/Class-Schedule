@@ -12,10 +12,13 @@ from django.db import transaction
 from django.db.models import Q
 
 from .models import (
+    MODULE_FINANCE,
+    MODULE_INFO,
     Course,
     Enrollment,
     Favorite,
     GraduationRequirement,
+    StudentProfile,
     StudyRecord,
     UserCreditLimit,
     DEFAULT_CREDIT_FLOOR,
@@ -81,13 +84,15 @@ class CourseDataStore:
         self._initialized = True
 
     def ensure_seeded(self):
-        """若資料庫尚無課程，寫入示範資料"""
-        if Course.objects.exists():
-            return
-        with self.lock:
-            if Course.objects.exists():
-                return
-            Course.objects.bulk_create([
+        """若資料庫尚無課程，寫入示範資料，並補上模組課程標記。"""
+        if not Course.objects.exists():
+            with self.lock:
+                if not Course.objects.exists():
+                    self._seed_sample_courses()
+        self._ensure_module_courses()
+
+    def _seed_sample_courses(self):
+        Course.objects.bulk_create([
                 Course(
                     course_id=cid,
                     name=name,
@@ -104,6 +109,33 @@ class CourseDataStore:
                 for cid, name, teacher, weekday, start, end, credits, ctype, target, quota
                 in SAMPLE_COURSES
             ])
+
+    def _ensure_module_courses(self):
+        """標記資訊模組選修，並補上金融模組示範課。已存在的課不會被覆蓋內容。"""
+        Course.objects.filter(
+            course_id__in=["CS301", "CS302", "CS303", "CS304"]
+        ).update(module=MODULE_INFO)
+        finance_courses = [
+            ("FIN201", "金融市場", "金教授", 5, 2, 4, 3, "選修", "全校", 40),
+            ("FIN202", "投資學", "投教授", 4, 6, 8, 3, "選修", "全校", 40),
+        ]
+        for cid, name, teacher, weekday, start, end, credits, ctype, target, quota in finance_courses:
+            Course.objects.get_or_create(
+                course_id=cid,
+                defaults={
+                    "name": name,
+                    "teacher": teacher,
+                    "weekday": weekday,
+                    "start_period": start,
+                    "end_period": end,
+                    "credits": credits,
+                    "course_type": ctype,
+                    "module": MODULE_FINANCE,
+                    "target_class": target,
+                    "total_quota": quota,
+                    "enrolled_count": 0,
+                },
+            )
 
     def get_course(self, course_id: str) -> Optional[Course]:
         self.ensure_seeded()
@@ -358,6 +390,51 @@ class CourseDataStore:
                 "in_progress": in_progress["通識"],
             },
             "in_progress_total": sum(in_progress.values()),
+        }
+
+    def get_student_module(self, user_id: str) -> str:
+        profile, _ = StudentProfile.objects.get_or_create(user_id=user_id)
+        return profile.module
+
+    def set_student_module(self, user_id: str, module: str) -> bool:
+        if module not in (MODULE_INFO, MODULE_FINANCE):
+            return False
+        StudentProfile.objects.update_or_create(
+            user_id=user_id, defaults={"module": module}
+        )
+        return True
+
+    def get_module_summary(self, user_id: str) -> dict:
+        """另一模組已通過學分，最多認列到上限，超出部分不計。"""
+        self._ensure_module_courses()
+        rule = self.get_graduation_requirement()
+        mine = self.get_student_module(user_id)
+        other = ""
+        if mine == MODULE_INFO:
+            other = MODULE_FINANCE
+        elif mine == MODULE_FINANCE:
+            other = MODULE_INFO
+
+        other_passed = 0
+        if other:
+            records = StudyRecord.objects.filter(
+                user_id=user_id, status=StudyRecord.STATUS_PASSED
+            ).select_related("course")
+            for record in records:
+                record_module = record.module
+                if not record_module and record.course_id:
+                    record_module = record.course.module
+                if record_module == other:
+                    other_passed += record.credits
+
+        cap = rule.recognition_cap
+        return {
+            "mine": mine,
+            "other": other,
+            "cap": cap,
+            "other_passed": other_passed,
+            "recognized": min(other_passed, cap),
+            "overflow": max(other_passed - cap, 0),
         }
 
     def get_user_total_credits(self, user_id: str) -> int:

@@ -143,6 +143,11 @@ SIMPLEUI_CONFIG = {
                     'url': 'timetable/graduationrequirement/',
                 },
                 {
+                    'name': '學生模組',
+                    'icon': 'fas fa-layer-group',
+                    'url': 'timetable/studentprofile/',
+                },
+                {
                     'name': '歷年修課紀錄',
                     'icon': 'fas fa-history',
                     'url': 'timetable/studyrecord/',

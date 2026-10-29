@@ -249,6 +249,26 @@ body {
     margin-top: 0.75rem;
 }
 
+.stack-card {
+    margin-top: 1.5rem;
+}
+
+.module-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.module-form .form-group {
+    min-width: 12rem;
+}
+
+.module-form .btn {
+    height: 42px;
+}
+
 .progress-track {
     height: 0.65rem;
     background-color: var(--border-color);

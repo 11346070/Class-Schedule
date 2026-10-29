@@ -139,14 +139,28 @@ def index(request):
 
 
 @login_required
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def progress(request):
-    """修課進度：畢業門檻與已取得學分。"""
+    """修課進度：畢業門檻、模組認列。"""
     user_id = get_user_id(request)
+    if request.method == "POST":
+        if course_store.set_student_module(user_id, request.POST.get("module", "")):
+            messages.success(request, "已更新主修模組")
+        else:
+            messages.error(request, "請選擇金融或資訊模組")
+        return redirect("progress")
+
     summary = course_store.get_graduation_summary(user_id)
     total = summary["total_required"] or 1
     summary["percent"] = min(100, round(summary["earned_total"] * 100 / total))
-    return render(request, "progress.html", {"summary": summary})
+    return render(
+        request,
+        "progress.html",
+        {
+            "summary": summary,
+            "module_summary": course_store.get_module_summary(user_id),
+        },
+    )
 
 
 @require_http_methods(["GET"])

@@ -7,6 +7,12 @@ from django.db import models
 
 DEFAULT_CREDIT_LIMIT = 25
 DEFAULT_CREDIT_FLOOR = 9
+MODULE_INFO = "資訊"
+MODULE_FINANCE = "金融"
+MODULE_CHOICES = [
+    (MODULE_INFO, "資訊"),
+    (MODULE_FINANCE, "金融"),
+]
 MIN_PERIOD = 1
 MAX_PERIOD = 13
 MIN_CREDITS = 1
@@ -28,6 +34,7 @@ class Course(models.Model):
     end_period = models.PositiveSmallIntegerField("結束節次")
     credits = models.PositiveSmallIntegerField("學分")
     course_type = models.CharField("課程類型", max_length=20)  # 必修、選修、通識
+    module = models.CharField("所屬模組", max_length=20, blank=True, default="")
     target_class = models.CharField("開課班級", max_length=50)
     total_quota = models.PositiveIntegerField("總名額")
     enrolled_count = models.PositiveIntegerField("已選人數", default=0)
@@ -103,6 +110,7 @@ class Course(models.Model):
             "time_display": self.get_time_display(),
             "credits": self.credits,
             "course_type": self.course_type,
+            "module": self.module,
             "target_class": self.target_class,
             "total_quota": self.total_quota,
             "enrolled_count": self.enrolled_count,
@@ -153,6 +161,7 @@ class GraduationRequirement(models.Model):
     required_credits = models.PositiveIntegerField("必修門檻", default=60)
     elective_credits = models.PositiveIntegerField("選修門檻", default=40)
     general_credits = models.PositiveIntegerField("通識門檻", default=28)
+    recognition_cap = models.PositiveIntegerField("模組認列上限", default=9)
 
     class Meta:
         verbose_name = "畢業門檻"
@@ -186,6 +195,7 @@ class StudyRecord(models.Model):
     course_name = models.CharField("課程名稱", max_length=100)
     credits = models.PositiveSmallIntegerField("學分")
     course_type = models.CharField("課程類型", max_length=20)
+    module = models.CharField("所屬模組", max_length=20, blank=True, default="")
     semester = models.CharField("學期", max_length=20, help_text="例如 113-1")
     status = models.CharField("狀態", max_length=20, choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -197,6 +207,19 @@ class StudyRecord(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.semester} {self.course_code} {self.get_status_display()}"
+
+
+class StudentProfile(models.Model):
+    """學生選擇的主修模組。另一模組學分最多認列到上限。"""
+    user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)
+    module = models.CharField("主修模組", max_length=20, blank=True, default="")
+
+    class Meta:
+        verbose_name = "學生模組"
+        verbose_name_plural = "學生模組"
+
+    def __str__(self):
+        return f"{self.user_id}: {self.module or '未選'}"
 
 
 class UserCreditLimit(models.Model):

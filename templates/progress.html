@@ -34,4 +34,31 @@
         <p>本學期正在修合計 {{ summary.in_progress_total }} 學分，尚未計入已取得。</p>
     </div>
 </div>
+
+<div class="detail-card stack-card">
+    <h2>模組選修規定</h2>
+    <form method="post" action="{% url 'progress' %}" class="module-form">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="module">我的模組</label>
+            <select id="module" name="module" class="form-control">
+                <option value="">請選擇</option>
+                <option value="資訊" {% if module_summary.mine == "資訊" %}selected{% endif %}>資訊</option>
+                <option value="金融" {% if module_summary.mine == "金融" %}selected{% endif %}>金融</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
+    </form>
+    <div class="progress-lines">
+        <p>認列上限：{{ module_summary.cap }} 學分</p>
+        {% if module_summary.mine %}
+        <p>另一模組（{{ module_summary.other }}）已通過 {{ module_summary.other_passed }} 學分，可相互認列 {{ module_summary.recognized }} 學分。</p>
+        {% if module_summary.overflow %}
+        <p class="credit-note">超出 {{ module_summary.overflow }} 學分不計入畢業認列。</p>
+        {% endif %}
+        {% else %}
+        <p>選擇金融或資訊後，才會計算另一模組最多可認列的學分。</p>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

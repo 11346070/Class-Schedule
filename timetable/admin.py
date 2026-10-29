@@ -10,6 +10,7 @@ from .models import (
     Enrollment,
     Favorite,
     GraduationRequirement,
+    StudentProfile,
     StudyRecord,
     UserCreditLimit,
 )
@@ -29,8 +30,9 @@ class CourseAdmin(admin.ModelAdmin):
         "enrolled_count",
         "total_quota",
         "target_class",
+        "module",
     )
-    list_filter = ("course_type", "weekday", "target_class")
+    list_filter = ("course_type", "module", "weekday", "target_class")
     search_fields = ("course_id", "name", "teacher")
     ordering = ("course_id",)
     list_per_page = 25
@@ -72,7 +74,15 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
         "required_credits",
         "elective_credits",
         "general_credits",
+        "recognition_cap",
     )
+
+
+@admin.register(StudentProfile)
+class StudentProfileAdmin(admin.ModelAdmin):
+    list_display = ("user_id", "module")
+    search_fields = ("user_id",)
+    list_filter = ("module",)
 
 
 @admin.register(StudyRecord)
