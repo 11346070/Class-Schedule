@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}個人設定 - 個人課表維護系統{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>個人設定</h1>
+    <p class="lead">帳號 {{ user.username }}</p>
+</div>
+
+<div class="detail-card">
+    <h2>修改密碼</h2>
+    <form method="post" action="{% url 'account_settings' %}" class="settings-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="password">
+        {% for field in password_form %}
+        <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {{ field.errors }}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">更新密碼</button>
+    </form>
+</div>
+
+<div class="detail-card stack-card">
+    <h2>本學期學分規則</h2>
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">學分上限</span>
+            <span class="stat-value">{{ credit_limit }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">學分下限</span>
+            <span class="stat-value">{{ credit_floor }}</span>
+        </div>
+    </div>
+    <p class="credit-note">上下限由管理員設定。退選後若低於下限，只能請管理員協助退選。</p>
+</div>
+
+<div class="detail-card stack-card">
+    <h2>主修模組</h2>
+    <form method="post" action="{% url 'account_settings' %}" class="module-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="module">
+        <div class="form-group">
+            <label for="module">模組</label>
+            <select id="module" name="module" class="form-control">
+                <option value="">請選擇</option>
+                <option value="資訊" {% if module == "資訊" %}selected{% endif %}>資訊</option>
+                <option value="金融" {% if module == "金融" %}selected{% endif %}>金融</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
+    </form>
+    <p>另一模組最多可認列的學分，會顯示在<a href="{% url 'progress' %}">修課進度</a>。</p>
+</div>
+{% endblock %}

@@ -14,6 +14,9 @@ urlpatterns = [
 
     # 修課進度
     path('progress/', views.progress, name='progress'),
+
+    # 個人設定
+    path('settings/', views.account_settings, name='account_settings'),
     
     # 課程詳細資訊
     path('courses/<str:course_id>/', views.course_detail, name='course_detail'),

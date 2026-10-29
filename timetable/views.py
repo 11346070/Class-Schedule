@@ -4,14 +4,14 @@ Views - 處理所有網頁請求與選課操作
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .data_store import course_store
-from .forms import RegisterForm, StyledAuthenticationForm
+from .forms import RegisterForm, StyledAuthenticationForm, StyledPasswordChangeForm
 
 
 class StyledLoginView(LoginView):
@@ -141,6 +141,39 @@ def index(request):
     }
     
     return render(request, 'index.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def account_settings(request):
+    """個人設定：帳號、密碼、學分規則與主修模組。"""
+    user_id = get_user_id(request)
+    password_form = StyledPasswordChangeForm(request.user)
+
+    if request.method == "POST" and request.POST.get("action") == "password":
+        password_form = StyledPasswordChangeForm(request.user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "密碼已更新")
+            return redirect("account_settings")
+    elif request.method == "POST" and request.POST.get("action") == "module":
+        if course_store.set_student_module(user_id, request.POST.get("module", "")):
+            messages.success(request, "已更新主修模組")
+        else:
+            messages.error(request, "請選擇金融或資訊模組")
+        return redirect("account_settings")
+
+    return render(
+        request,
+        "account_settings.html",
+        {
+            "password_form": password_form,
+            "credit_limit": course_store.get_user_credit_limit(user_id),
+            "credit_floor": course_store.get_user_credit_floor(user_id),
+            "module": course_store.get_student_module(user_id),
+        },
+    )
 
 
 @login_required

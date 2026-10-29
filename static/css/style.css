@@ -269,6 +269,18 @@ body {
     height: 42px;
 }
 
+.settings-form {
+    max-width: 24rem;
+}
+
+.settings-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.settings-form .btn {
+    margin-top: 0.25rem;
+}
+
 .review-summary {
     display: block;
     margin-top: 0.25rem;
