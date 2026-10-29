@@ -14,7 +14,16 @@
             <span class="stat-label">總學分</span>
             <span class="stat-value">{{ total_credits }} / {{ credit_limit }}</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-label">學分下限</span>
+            <span class="stat-value">{{ credit_floor }}</span>
+        </div>
     </div>
+    {% if enrolled_count and total_credits <= credit_floor %}
+    <p class="credit-note">已達最低學分，無法再自行退選。如需退選，請聯絡管理員。</p>
+    {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
+    <p class="credit-note">接近最低學分。退到下限以下時，只能請管理員協助退選。</p>
+    {% endif %}
 </div>
 
 <!-- 每週課表 -->

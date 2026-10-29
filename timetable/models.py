@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 DEFAULT_CREDIT_LIMIT = 25
+DEFAULT_CREDIT_FLOOR = 9
 MIN_PERIOD = 1
 MAX_PERIOD = 13
 MIN_CREDITS = 1
@@ -147,9 +148,10 @@ class Favorite(models.Model):
 
 
 class UserCreditLimit(models.Model):
-    """使用者學分上限"""
+    """使用者學分上限與下限"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)
     credit_limit = models.PositiveIntegerField("學分上限", default=DEFAULT_CREDIT_LIMIT)
+    credit_floor = models.PositiveIntegerField("學分下限", default=DEFAULT_CREDIT_FLOOR)
 
     def __str__(self):
-        return f"{self.user_id}: {self.credit_limit}"
+        return f"{self.user_id}: {self.credit_floor}–{self.credit_limit}"

@@ -245,6 +245,15 @@ body {
     color: var(--text-secondary);
 }
 
+.credit-note {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid var(--warning-color);
+}
+
 .stat-value {
     font-size: 1.5rem;
     font-weight: bold;

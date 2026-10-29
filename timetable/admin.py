@@ -3,6 +3,8 @@ Django Admin 設定（搭配 SimpleUI）
 """
 
 from django.contrib import admin
+
+from .data_store import course_store
 from .models import Course, Enrollment, Favorite, UserCreditLimit
 
 
@@ -37,6 +39,14 @@ class EnrollmentAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     list_per_page = 25
 
+    def delete_model(self, request, obj):
+        """管理員退選不受學分下限限制，並同步名額。"""
+        course_store.drop_course(obj.user_id, obj.course_id, force=True)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            course_store.drop_course(obj.user_id, obj.course_id, force=True)
+
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
@@ -50,6 +60,6 @@ class FavoriteAdmin(admin.ModelAdmin):
 
 @admin.register(UserCreditLimit)
 class UserCreditLimitAdmin(admin.ModelAdmin):
-    list_display = ("user_id", "credit_limit")
+    list_display = ("user_id", "credit_floor", "credit_limit")
     search_fields = ("user_id",)
     ordering = ("user_id",)

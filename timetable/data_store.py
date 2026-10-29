@@ -16,6 +16,7 @@ from .models import (
     Enrollment,
     Favorite,
     UserCreditLimit,
+    DEFAULT_CREDIT_FLOOR,
     DEFAULT_CREDIT_LIMIT,
 )
 
@@ -147,11 +148,25 @@ class CourseDataStore:
             user_id=user_id, course_id=course_id
         ).exists()
 
+    def _get_credit_rule(self, user_id: str) -> UserCreditLimit:
+        rule, _ = UserCreditLimit.objects.get_or_create(
+            user_id=user_id,
+            defaults={
+                "credit_limit": DEFAULT_CREDIT_LIMIT,
+                "credit_floor": DEFAULT_CREDIT_FLOOR,
+            },
+        )
+        return rule
+
     def get_user_credit_limit(self, user_id: str) -> int:
-        try:
-            return UserCreditLimit.objects.get(pk=user_id).credit_limit
-        except UserCreditLimit.DoesNotExist:
+        if not user_id:
             return DEFAULT_CREDIT_LIMIT
+        return self._get_credit_rule(user_id).credit_limit
+
+    def get_user_credit_floor(self, user_id: str) -> int:
+        if not user_id:
+            return DEFAULT_CREDIT_FLOOR
+        return self._get_credit_rule(user_id).credit_floor
 
     def set_user_credit_limit(self, user_id: str, limit: int) -> bool:
         if limit <= 0:
@@ -229,7 +244,9 @@ class CourseDataStore:
 
                 return True, f"選課成功！剩餘名額：{course.remaining_quota}"
 
-    def drop_course(self, user_id: str, course_id: str) -> Tuple[bool, str]:
+    def drop_course(
+        self, user_id: str, course_id: str, force: bool = False
+    ) -> Tuple[bool, str]:
         with self.lock:
             with transaction.atomic():
                 try:
@@ -237,12 +254,26 @@ class CourseDataStore:
                 except Course.DoesNotExist:
                     return False, "課程不存在"
 
-                deleted, _ = Enrollment.objects.filter(
-                    user_id=user_id, course=course
-                ).delete()
-                if not deleted:
+                enrollment = (
+                    Enrollment.objects.select_for_update()
+                    .filter(user_id=user_id, course=course)
+                    .first()
+                )
+                if enrollment is None:
                     return False, "您尚未選修此課程"
 
+                current_credits = self.get_user_total_credits(user_id)
+                credit_floor = self.get_user_credit_floor(user_id)
+                remaining = current_credits - course.credits
+                if not force and remaining < credit_floor:
+                    return (
+                        False,
+                        f"低於學分下限：目前 {current_credits} 學分，退選後將剩 "
+                        f"{remaining} 學分，下限為 {credit_floor} 學分。"
+                        "請聯絡管理員協助退選。",
+                    )
+
+                enrollment.delete()
                 if course.enrolled_count > 0:
                     course.enrolled_count -= 1
                     course.save(update_fields=["enrolled_count"])

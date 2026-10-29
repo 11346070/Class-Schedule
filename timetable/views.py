@@ -96,6 +96,7 @@ def index(request):
     enrolled_courses = course_store.get_user_enrollments(user_id)
     total_credits = course_store.get_user_total_credits(user_id)
     credit_limit = course_store.get_user_credit_limit(user_id)
+    credit_floor = course_store.get_user_credit_floor(user_id)
     
     # 建立每週課表（簡化版，直接給模板使用）
     weekly_schedule = []
@@ -124,6 +125,7 @@ def index(request):
         'enrolled_courses': enrolled_courses,
         'total_credits': total_credits,
         'credit_limit': credit_limit,
+        'credit_floor': credit_floor,
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
         'weekdays': [

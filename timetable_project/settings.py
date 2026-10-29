@@ -133,7 +133,7 @@ SIMPLEUI_CONFIG = {
                     'url': 'timetable/favorite/',
                 },
                 {
-                    'name': '學分上限',
+                    'name': '學分上下限',
                     'icon': 'fas fa-graduation-cap',
                     'url': 'timetable/usercreditlimit/',
                 },
