@@ -245,6 +245,32 @@ body {
     color: var(--text-secondary);
 }
 
+.progress-link {
+    margin-top: 0.75rem;
+}
+
+.progress-track {
+    height: 0.65rem;
+    background-color: var(--border-color);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 1rem 0 1.25rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+}
+
+.progress-lines {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.progress-lines p {
+    margin: 0;
+}
+
 .credit-note {
     margin-top: 1rem;
     padding: 0.75rem 1rem;

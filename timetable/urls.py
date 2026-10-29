@@ -11,6 +11,9 @@ urlpatterns = [
     
     # 課程清單
     path('courses/', views.course_list, name='course_list'),
+
+    # 修課進度
+    path('progress/', views.progress, name='progress'),
     
     # 課程詳細資訊
     path('courses/<str:course_id>/', views.course_detail, name='course_detail'),

@@ -5,7 +5,14 @@ Django Admin 設定（搭配 SimpleUI）
 from django.contrib import admin
 
 from .data_store import course_store
-from .models import Course, Enrollment, Favorite, UserCreditLimit
+from .models import (
+    Course,
+    Enrollment,
+    Favorite,
+    GraduationRequirement,
+    StudyRecord,
+    UserCreditLimit,
+)
 
 
 @admin.register(Course)
@@ -55,6 +62,33 @@ class FavoriteAdmin(admin.ModelAdmin):
     search_fields = ("user_id", "course__course_id", "course__name")
     autocomplete_fields = ("course",)
     ordering = ("-created_at",)
+    list_per_page = 25
+
+
+@admin.register(GraduationRequirement)
+class GraduationRequirementAdmin(admin.ModelAdmin):
+    list_display = (
+        "total_credits",
+        "required_credits",
+        "elective_credits",
+        "general_credits",
+    )
+
+
+@admin.register(StudyRecord)
+class StudyRecordAdmin(admin.ModelAdmin):
+    list_display = (
+        "user_id",
+        "semester",
+        "course_code",
+        "course_name",
+        "course_type",
+        "credits",
+        "status",
+    )
+    list_filter = ("status", "course_type", "semester")
+    search_fields = ("user_id", "course_code", "course_name")
+    ordering = ("-semester", "course_code")
     list_per_page = 25
 
 

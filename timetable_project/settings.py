@@ -137,6 +137,16 @@ SIMPLEUI_CONFIG = {
                     'icon': 'fas fa-graduation-cap',
                     'url': 'timetable/usercreditlimit/',
                 },
+                {
+                    'name': '畢業門檻',
+                    'icon': 'fas fa-award',
+                    'url': 'timetable/graduationrequirement/',
+                },
+                {
+                    'name': '歷年修課紀錄',
+                    'icon': 'fas fa-history',
+                    'url': 'timetable/studyrecord/',
+                },
             ],
         },
     ],

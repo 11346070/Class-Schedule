@@ -15,6 +15,8 @@ from .models import (
     Course,
     Enrollment,
     Favorite,
+    GraduationRequirement,
+    StudyRecord,
     UserCreditLimit,
     DEFAULT_CREDIT_FLOOR,
     DEFAULT_CREDIT_LIMIT,
@@ -300,6 +302,63 @@ class CourseDataStore:
     @staticmethod
     def _periods_overlap(start1: int, end1: int, start2: int, end2: int) -> bool:
         return not (end1 < start2 or end2 < start1)
+
+    def get_graduation_requirement(self) -> GraduationRequirement:
+        rule, _ = GraduationRequirement.objects.get_or_create(
+            pk=1,
+            defaults={
+                "total_credits": 128,
+                "required_credits": 60,
+                "elective_credits": 40,
+                "general_credits": 28,
+            },
+        )
+        return rule
+
+    def get_graduation_summary(self, user_id: str) -> dict:
+        """已取得只算歷年「已通過」；本學期選課另計為正在修。"""
+        rule = self.get_graduation_requirement()
+        passed = {"必修": 0, "選修": 0, "通識": 0}
+        for record in StudyRecord.objects.filter(
+            user_id=user_id, status=StudyRecord.STATUS_PASSED
+        ):
+            if record.course_type in passed:
+                passed[record.course_type] += record.credits
+
+        in_progress = {"必修": 0, "選修": 0, "通識": 0}
+        for course in self.get_user_enrollments(user_id):
+            if course.course_type in in_progress:
+                in_progress[course.course_type] += course.credits
+
+        earned_total = sum(passed.values())
+
+        def gap(have, need):
+            return max(need - have, 0)
+
+        return {
+            "total_required": rule.total_credits,
+            "earned_total": earned_total,
+            "remaining_total": gap(earned_total, rule.total_credits),
+            "required": {
+                "need": rule.required_credits,
+                "earned": passed["必修"],
+                "gap": gap(passed["必修"], rule.required_credits),
+                "in_progress": in_progress["必修"],
+            },
+            "elective": {
+                "need": rule.elective_credits,
+                "earned": passed["選修"],
+                "gap": gap(passed["選修"], rule.elective_credits),
+                "in_progress": in_progress["選修"],
+            },
+            "general": {
+                "need": rule.general_credits,
+                "earned": passed["通識"],
+                "gap": gap(passed["通識"], rule.general_credits),
+                "in_progress": in_progress["通識"],
+            },
+            "in_progress_total": sum(in_progress.values()),
+        }
 
     def get_user_total_credits(self, user_id: str) -> int:
         enrolled_courses = self.get_user_enrollments(user_id)

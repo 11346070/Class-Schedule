@@ -24,6 +24,7 @@
     {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
     <p class="credit-note">接近最低學分。退到下限以下時，只能請管理員協助退選。</p>
     {% endif %}
+    <p class="progress-link"><a href="{% url 'progress' %}">查看畢業進度</a></p>
 </div>
 
 <!-- 每週課表 -->

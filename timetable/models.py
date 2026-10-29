@@ -147,6 +147,58 @@ class Favorite(models.Model):
         return f"{self.user_id} ★ {self.course_id}"
 
 
+class GraduationRequirement(models.Model):
+    """畢業學分門檻（全系統一份，由管理員調整）。"""
+    total_credits = models.PositiveIntegerField("畢業總學分", default=128)
+    required_credits = models.PositiveIntegerField("必修門檻", default=60)
+    elective_credits = models.PositiveIntegerField("選修門檻", default=40)
+    general_credits = models.PositiveIntegerField("通識門檻", default=28)
+
+    class Meta:
+        verbose_name = "畢業門檻"
+        verbose_name_plural = "畢業門檻"
+
+    def __str__(self):
+        return f"畢業 {self.total_credits} 學分"
+
+
+class StudyRecord(models.Model):
+    """歷年修課紀錄。已通過的學分才計入畢業「已取得」。"""
+    STATUS_PASSED = "passed"
+    STATUS_FAILED = "failed"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_CHOICES = [
+        (STATUS_PASSED, "已通過"),
+        (STATUS_FAILED, "未通過"),
+        (STATUS_IN_PROGRESS, "正在修"),
+    ]
+
+    user_id = models.CharField("使用者 ID", max_length=64, db_index=True)
+    course = models.ForeignKey(
+        Course,
+        verbose_name="課程",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="study_records",
+    )
+    course_code = models.CharField("課程編號", max_length=20)
+    course_name = models.CharField("課程名稱", max_length=100)
+    credits = models.PositiveSmallIntegerField("學分")
+    course_type = models.CharField("課程類型", max_length=20)
+    semester = models.CharField("學期", max_length=20, help_text="例如 113-1")
+    status = models.CharField("狀態", max_length=20, choices=STATUS_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-semester", "course_code"]
+        verbose_name = "歷年修課紀錄"
+        verbose_name_plural = "歷年修課紀錄"
+
+    def __str__(self):
+        return f"{self.user_id} {self.semester} {self.course_code} {self.get_status_display()}"
+
+
 class UserCreditLimit(models.Model):
     """使用者學分上限與下限"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)

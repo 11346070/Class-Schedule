@@ -138,6 +138,17 @@ def index(request):
     return render(request, 'index.html', context)
 
 
+@login_required
+@require_http_methods(["GET"])
+def progress(request):
+    """修課進度：畢業門檻與已取得學分。"""
+    user_id = get_user_id(request)
+    summary = course_store.get_graduation_summary(user_id)
+    total = summary["total_required"] or 1
+    summary["percent"] = min(100, round(summary["earned_total"] * 100 / total))
+    return render(request, "progress.html", {"summary": summary})
+
+
 @require_http_methods(["GET"])
 def course_list(request):
     """課程清單頁 - 顯示所有課程並支援搜尋"""
