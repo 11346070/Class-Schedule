@@ -37,6 +37,10 @@ body {
     padding: 0 20px;
 }
 
+.container.container-wide {
+    max-width: 1600px;
+}
+
 /* === 導航列 === */
 .navbar {
     background-color: #fff;
@@ -372,22 +376,23 @@ body {
 }
 
 .course-table.course-list-table {
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
     table-layout: auto;
 }
 
 .course-table.course-list-table th,
 .course-table.course-list-table td {
     text-align: left;
-    white-space: nowrap;
+    white-space: normal;
     vertical-align: middle;
 }
 
 .course-table.course-list-table .col-status {
     white-space: normal;
-    min-width: 14rem;
-    padding-left: 1.75rem;
+    width: 11rem;
+    min-width: 0;
+    padding-left: 0.85rem;
     border-left: 1px solid var(--border-color);
 }
 
@@ -401,8 +406,8 @@ body {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.35rem;
-    width: 14rem;
-    max-width: 16rem;
+    width: auto;
+    max-width: 11rem;
 }
 
 .course-status-block .badge {
@@ -844,7 +849,8 @@ body {
 
 /* 平板與小筆電 (768px - 1024px) */
 @media (max-width: 1024px) {
-    .container {
+    .container,
+    .container.container-wide {
         max-width: 100%;
         padding: 0 15px;
     }
