@@ -381,3 +381,61 @@ class AdminIdentityTests(TestCase):
         users = self.client.get("/admin/auth/user/")
         self.assertContains(users, "student2")
         self.assertNotContains(users, "password")
+
+        home = self.client.get("/admin/")
+        self.assertContains(home, "/admin/timetable/coursereview/")
+        reviews = self.client.get("/admin/timetable/coursereview/")
+        self.assertEqual(reviews.status_code, 200)
+
+
+class StudyRecordSyncTests(TestCase):
+    def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):
+        from timetable.models import Course, StudyRecord
+
+        student = User.objects.create_user(username="record-student", password="Old-password-1")
+        staff = User.objects.create_superuser("record-boss", "boss2@example.com", "Old-password-1")
+        course_store.ensure_seeded()
+        enrolled, _message = course_store.enroll_course(str(student.pk), "CS101")
+        self.assertTrue(enrolled)
+        course = Course.objects.get(pk="CS101")
+        record = StudyRecord.objects.create(
+            user_id=str(student.pk),
+            course=course,
+            course_code=course.course_id,
+            course_name=course.name,
+            credits=course.credits,
+            course_type=course.course_type,
+            semester="113-1",
+            status=StudyRecord.STATUS_IN_PROGRESS,
+        )
+
+        self.client.force_login(staff)
+        listing = self.client.get("/admin/timetable/studyrecord/")
+        self.assertContains(listing, "form-0-status")
+        self.assertContains(listing, "已通過")
+        updated = self.client.post(
+            "/admin/timetable/studyrecord/",
+            {
+                "action": "mark_passed",
+                "index": "0",
+                "_selected_action": [str(record.pk)],
+            },
+            follow=True,
+        )
+        self.assertEqual(updated.status_code, 200)
+        record.refresh_from_db()
+        self.assertEqual(record.status, StudyRecord.STATUS_PASSED)
+
+        history = [
+            row for row in course_store.get_study_history(str(student.pk))
+            if row["course_code"] == "CS101"
+        ]
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["status"], StudyRecord.STATUS_PASSED)
+        summary = course_store.get_graduation_summary(str(student.pk))
+        self.assertEqual(summary["required"]["earned"], course.credits)
+        self.assertEqual(summary["required"]["in_progress"], 0)
+
+        self.client.force_login(student)
+        progress = self.client.get(reverse("progress"))
+        self.assertContains(progress, "已通過")

@@ -434,14 +434,19 @@ class CourseDataStore:
         """已取得只算歷年「已通過」；本學期選課另計為正在修。"""
         rule = self.get_graduation_requirement()
         passed = {"必修": 0, "選修": 0, "通識": 0}
+        passed_codes = set()
         for record in StudyRecord.objects.filter(
             user_id=user_id, status=StudyRecord.STATUS_PASSED
         ):
             if record.course_type in passed:
                 passed[record.course_type] += record.credits
+            if record.course_code:
+                passed_codes.add(record.course_code)
 
         in_progress = {"必修": 0, "選修": 0, "通識": 0}
         for course in self.get_user_enrollments(user_id):
+            if course.course_id in passed_codes:
+                continue
             if course.course_type in in_progress:
                 in_progress[course.course_type] += course.credits
 
@@ -566,7 +571,14 @@ class CourseDataStore:
                 "status": record.status,
                 "status_label": record.get_status_display(),
             })
+        recorded = {
+            row["course_code"]
+            for row in rows
+            if row["status"] in (StudyRecord.STATUS_PASSED, StudyRecord.STATUS_IN_PROGRESS)
+        }
         for course in self.get_user_enrollments(user_id):
+            if course.course_id in recorded:
+                continue
             rows.append({
                 "semester": "本學期",
                 "course_code": course.course_id,

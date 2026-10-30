@@ -93,6 +93,7 @@ class TimetableUserAdmin(DjangoUserAdmin):
         "last_name",
         "is_staff",
         "is_active",
+        "date_joined",
     )
     search_fields = ("username", "email", "first_name", "last_name")
     list_filter = ("is_staff", "is_superuser", "is_active")
@@ -288,6 +289,7 @@ class CourseReviewAdmin(UserIdentityMixin, admin.ModelAdmin):
     date_hierarchy = "updated_at"
     ordering = ("-updated_at",)
     list_per_page = 25
+    list_select_related = ("course",)
     readonly_fields = ("updated_at",)
 
 
@@ -324,12 +326,46 @@ class StudyRecordAdmin(UserIdentityMixin, admin.ModelAdmin):
         "credits",
         "status",
     )
+    list_display_links = ("course_code",)
+    list_editable = ("status",)
     list_filter = ("status", "course_type", "semester", "module")
     search_fields = ("user_id", "course_code", "course_name")
     autocomplete_fields = ("course",)
     ordering = ("-semester", "course_code")
     list_per_page = 25
+    list_select_related = ("course",)
     readonly_fields = ("created_at",)
+    actions = ("mark_passed", "mark_failed", "mark_in_progress")
+
+    def save_model(self, request, obj, form, change):
+        course = obj.course
+        if course is not None:
+            obj.course_code = obj.course_code or course.course_id
+            obj.course_name = obj.course_name or course.name
+            obj.course_type = obj.course_type or course.course_type
+            obj.module = obj.module or course.module
+            if not obj.credits:
+                obj.credits = course.credits
+        super().save_model(request, obj, form, change)
+
+    def _set_status(self, request, queryset, status, label):
+        count = queryset.update(status=status)
+        self.message_user(request, f"已將 {count} 筆修課紀錄改為{label}。")
+
+    # 不用 @admin.action：Django 6 會在函式上放無法序列化的 locations，
+    # SimpleUI 把動作屬性轉成 JSON 時，整個列表頁會壞掉。
+    def mark_passed(self, request, queryset):
+        self._set_status(request, queryset, StudyRecord.STATUS_PASSED, "已通過")
+
+    def mark_failed(self, request, queryset):
+        self._set_status(request, queryset, StudyRecord.STATUS_FAILED, "未通過")
+
+    def mark_in_progress(self, request, queryset):
+        self._set_status(request, queryset, StudyRecord.STATUS_IN_PROGRESS, "正在修")
+
+    mark_passed.short_description = "標為已通過"
+    mark_failed.short_description = "標為未通過"
+    mark_in_progress.short_description = "標為正在修"
 
 
 @admin.register(UserCreditLimit)
