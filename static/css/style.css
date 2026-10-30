@@ -1034,6 +1034,10 @@ body {
     box-shadow: none;
 }
 
+.detail-actions > .alert {
+    margin-bottom: 1rem;
+}
+
 .detail-action-buttons {
     display: flex;
     flex-wrap: wrap;
