@@ -50,7 +50,7 @@
             </form>
         </div>
 
-        <form method="post" action="{% url 'logout' %}" class="logout-row" onsubmit="return confirm('確定要登出嗎？');">
+        <form method="post" action="{% url 'logout' %}" class="logout-row" data-confirm="確定要登出嗎？">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline">登出</button>
         </form>

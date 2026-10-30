@@ -13,7 +13,7 @@
             } catch (e) {}
         })();
     </script>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261030b">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261030c">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -87,9 +87,19 @@
     <div class="messages-container">
         <div class="container">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-                <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+            <div class="alert alert-{{ message.tags }}" role="status">
+                <span class="alert-mark" aria-hidden="true"></span>
+                <div class="alert-copy">
+                    <strong>
+                        {% if message.tags == 'success' %}完成
+                        {% elif message.tags == 'warning' %}請注意
+                        {% elif message.tags == 'error' or message.tags == 'danger' %}無法完成
+                        {% else %}提示
+                        {% endif %}
+                    </strong>
+                    <span>{{ message }}</span>
+                </div>
+                <button type="button" class="alert-close" aria-label="關閉">×</button>
             </div>
             {% endfor %}
         </div>
@@ -114,7 +124,18 @@
     </footer>
     {% endblock %}
 
-    <script src="/static/js/main.js?v=20261029o"></script>
+    <div class="dialog-backdrop" id="app-dialog" hidden>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="app-dialog-title">
+            <span class="dialog-mark" aria-hidden="true"></span>
+            <h2 id="app-dialog-title">請確認</h2>
+            <p id="app-dialog-body"></p>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-secondary" id="app-dialog-cancel">取消</button>
+                <button type="button" class="btn btn-danger" id="app-dialog-ok">確定</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/main.js?v=20261030c"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

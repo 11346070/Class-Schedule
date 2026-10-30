@@ -42,3 +42,12 @@ class HomepageTests(TestCase):
         self.assertEqual([course["course_id"] for course in payload["courses"]], ["CS101"])
         self.assertContains(response, "匯出課表")
         self.assertContains(response, "timetable-export.js")
+        self.assertContains(response, "data-confirm=")
+        self.assertNotContains(response, "onclick=\"return confirm")
+        self.assertContains(response, "app-dialog")
+
+    def test_feedback_message_uses_the_shared_alert(self):
+        response = self.client.post(reverse("logout"), follow=True)
+        self.assertContains(response, "alert-success")
+        self.assertContains(response, "已登出")
+        self.assertContains(response, "完成")

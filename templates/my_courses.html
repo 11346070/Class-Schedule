@@ -48,7 +48,7 @@
                             {% csrf_token %}
                             <input type="hidden" name="course_id" value="{{ course.course_id }}">
                             <input type="hidden" name="next" value="my_courses">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選</button>
+                            <button type="submit" class="btn btn-danger btn-sm" data-confirm="確定要退選「{{ course.name }}」嗎？">退選</button>
                         </form>
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
                     </td>

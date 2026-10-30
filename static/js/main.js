@@ -89,26 +89,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 自動隱藏訊息提示
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            alert.style.transition = 'opacity 0.5s';
-            alert.style.opacity = '0';
-            setTimeout(function() {
-                alert.remove();
-            }, 500);
-        }, 5000);
+    document.querySelectorAll('.alert').forEach(function (alert) {
+        const close = alert.querySelector('.alert-close');
+        if (close) close.addEventListener('click', function () { dismissAlert(alert); });
+        setTimeout(function () { dismissAlert(alert); }, 5000);
     });
-    
-    // 表單驗證
+
     const forms = document.querySelectorAll('form');
-    forms.forEach(function(form) {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn && !submitBtn.hasAttribute('data-no-disable')) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = '處理中...';
+    forms.forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            const submitter = event.submitter || form.querySelector('button[type="submit"]');
+            const message = (submitter && submitter.getAttribute('data-confirm')) || form.getAttribute('data-confirm');
+            if (message && form.dataset.confirmed !== '1') {
+                event.preventDefault();
+                openDialog(message).then(function (accepted) {
+                    if (!accepted) return;
+                    form.dataset.confirmed = '1';
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit(submitter);
+                    else form.submit();
+                });
+                return;
+            }
+            if (submitter && !submitter.hasAttribute('data-no-disable')) {
+                submitter.disabled = true;
+                submitter.textContent = '處理中...';
             }
         });
     });
@@ -136,14 +140,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 確認對話框樣式增強
-    const confirmButtons = document.querySelectorAll('[onclick*="confirm"]');
-    confirmButtons.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            // 原生 confirm 已在 onclick 中處理
-        });
-    });
 });
+
+function dismissAlert(alert) {
+    if (!alert || !alert.isConnected || alert.classList.contains('is-leaving')) return;
+    alert.classList.add('is-leaving');
+    setTimeout(function () { alert.remove(); }, 180);
+}
+
+function openDialog(message) {
+    const backdrop = document.getElementById('app-dialog');
+    const body = document.getElementById('app-dialog-body');
+    const ok = document.getElementById('app-dialog-ok');
+    const cancel = document.getElementById('app-dialog-cancel');
+    if (!backdrop || !body || !ok || !cancel) return Promise.resolve(window.confirm(message));
+    body.textContent = message;
+    backdrop.hidden = false;
+    cancel.focus();
+    return new Promise(function (resolve) {
+        function finish(accepted) {
+            backdrop.hidden = true;
+            ok.removeEventListener('click', onOk);
+            cancel.removeEventListener('click', onCancel);
+            backdrop.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKey);
+            resolve(accepted);
+        }
+        function onOk() { finish(true); }
+        function onCancel() { finish(false); }
+        function onBackdrop(event) { if (event.target === backdrop) finish(false); }
+        function onKey(event) { if (event.key === 'Escape') finish(false); }
+        ok.addEventListener('click', onOk);
+        cancel.addEventListener('click', onCancel);
+        backdrop.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+    });
+}
 
 function setPasswordRule(item, started, ok) {
     if (!item) return;
@@ -162,20 +194,27 @@ function showMessage(message, type = 'success') {
     const messagesContainer = document.querySelector('.messages-container .container');
     if (!messagesContainer) return;
     
+    const titles = { success: '完成', error: '無法完成', danger: '無法完成', warning: '請注意' };
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
-    `;
-    
+    alertDiv.setAttribute('role', 'status');
+    const mark = document.createElement('span');
+    mark.className = 'alert-mark';
+    mark.setAttribute('aria-hidden', 'true');
+    const copy = document.createElement('div');
+    copy.className = 'alert-copy';
+    const title = document.createElement('strong');
+    title.textContent = titles[type] || '提示';
+    const text = document.createElement('span');
+    text.textContent = message;
+    copy.append(title, text);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'alert-close';
+    close.setAttribute('aria-label', '關閉');
+    close.textContent = '×';
+    close.addEventListener('click', function () { dismissAlert(alertDiv); });
+    alertDiv.append(mark, copy, close);
     messagesContainer.appendChild(alertDiv);
-    
-    setTimeout(function() {
-        alertDiv.style.transition = 'opacity 0.5s';
-        alertDiv.style.opacity = '0';
-        setTimeout(function() {
-            alertDiv.remove();
-        }, 500);
-    }, 5000);
+    setTimeout(function () { dismissAlert(alertDiv); }, 5000);
 }

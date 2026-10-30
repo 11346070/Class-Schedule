@@ -108,7 +108,7 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
                                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要退選嗎？');">退選</button>
+                                <button type="submit" class="btn btn-danger btn-sm" data-confirm="確定要退選嗎？">退選</button>
                             </form>
                         {% elif course.can_enroll %}
                             <form method="post" action="{% url 'enroll_course' %}">

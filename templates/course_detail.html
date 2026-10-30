@@ -84,7 +84,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="course_id" value="{{ course.course_id }}">
                 <input type="hidden" name="next" value="course_detail">
-                <button type="submit" class="btn btn-danger" onclick="return confirm('確定要退選「{{ course.name }}」嗎？');">退選此課程</button>
+                <button type="submit" class="btn btn-danger" data-confirm="確定要退選「{{ course.name }}」嗎？">退選此課程</button>
             </form>
             {% else %}
                 {% if can_enroll %}
