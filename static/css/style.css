@@ -2196,11 +2196,17 @@ body {
 .settings-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    grid-template-areas:
+        "password avatar"
+        "logout .";
     gap: 20px;
     align-items: stretch;
     max-width: 100%;
     min-width: 0;
 }
+
+.settings-panel-password { grid-area: password; }
+.settings-panel-avatar { grid-area: avatar; }
 
 .settings-panel {
     display: flex;
@@ -2243,15 +2249,22 @@ body {
 }
 
 .logout-row {
-    margin-top: auto;
-    padding-top: 1.5rem;
-    align-self: flex-start;
+    grid-area: logout;
+    margin: 0;
+    justify-self: start;
+    align-self: start;
 }
 
 .logout-row .btn { width: auto; }
 
 @media (max-width: 860px) {
-    .settings-layout { grid-template-columns: minmax(0, 1fr); }
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "password"
+            "logout"
+            "avatar";
+    }
 }
 
 .readonly-list { margin: 0; }
