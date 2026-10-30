@@ -8,7 +8,16 @@
         <h1>我的課表總覽</h1>
         <p class="lead">這一週的課，以及本學期已選學分。</p>
     </div>
-    <a class="btn btn-secondary" href="{% url 'progress' %}">查看畢業進度</a>
+    <div class="home-actions">
+        <div class="export-menu" id="export-menu">
+            <button type="button" class="btn btn-secondary" id="export-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="export-panel">匯出課表</button>
+            <div class="export-menu-panel" id="export-panel" hidden>
+                <button type="button" data-export="pdf">匯出 PDF</button>
+                <button type="button" data-export="png">匯出 PNG</button>
+            </div>
+        </div>
+        <a class="btn btn-secondary" href="{% url 'progress' %}">查看畢業進度</a>
+    </div>
 </div>
 
 <section class="home-summary" aria-label="本學期學分">
@@ -153,11 +162,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// 自訂 template filter 功能
-document.addEventListener('DOMContentLoaded', function() {
-    // 處理課表顯示
-    console.log('課表已載入');
-});
-</script>
+{{ export_payload|json_script:"timetable-export-data" }}
+<script src="/static/js/timetable-export.js?v=20261030b"></script>
 {% endblock %}

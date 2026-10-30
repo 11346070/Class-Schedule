@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from timetable.data_store import course_store
+
 
 class HomepageTests(TestCase):
     def setUp(self):
@@ -26,3 +28,17 @@ class HomepageTests(TestCase):
         self.assertEqual(schedule[9], "17:15–18:05")
         self.assertEqual(schedule[11], "18:30–19:15")
         self.assertNotIn("待確認", response.content.decode())
+
+    def test_export_payload_uses_the_signed_in_timetable(self):
+        course_store.ensure_seeded()
+        enrolled, _message = course_store.enroll_course(str(self.user.pk), "CS101")
+        self.assertTrue(enrolled)
+        response = self.client.get(reverse("index"))
+        payload = response.context["export_payload"]
+        self.assertEqual(payload["username"], "student")
+        self.assertEqual(payload["periods"][9]["period"], 10)
+        self.assertEqual(payload["periods"][9]["time"], "")
+        self.assertEqual(payload["periods"][0]["time"], "08:10–09:00")
+        self.assertEqual([course["course_id"] for course in payload["courses"]], ["CS101"])
+        self.assertContains(response, "匯出課表")
+        self.assertContains(response, "timetable-export.js")

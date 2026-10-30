@@ -163,6 +163,30 @@ def index(request):
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
         ],
         'periods': range(1, 14),
+        'export_payload': {
+            'username': request.user.username,
+            'display_name': request.user.get_full_name() or request.user.username,
+            'semester': '本學期',
+            'periods': [
+                {'period': period, 'time': PERIOD_TIMES.get(period, '')}
+                for period in range(1, 14)
+            ],
+            'weekdays': ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
+            'courses': [
+                {
+                    'course_id': course.course_id,
+                    'name': course.name,
+                    'teacher': course.teacher,
+                    'weekday': course.weekday,
+                    'start_period': course.start_period,
+                    'end_period': course.end_period,
+                    'credits': course.credits,
+                    'course_type': course.course_type,
+                    'target_class': course.target_class,
+                }
+                for course in enrolled_courses
+            ],
+        },
     }
     
     return render(request, 'index.html', context)
