@@ -197,3 +197,33 @@ class AccountSettingsTests(TestCase):
         self.assertTrue(enrolled)
         response = self.client.get(reverse("index"))
         self.assertContains(response, "已達退選下限")
+
+
+class AdminIdentityTests(TestCase):
+    def test_staff_can_identify_users_and_students_cannot_enter_admin(self):
+        student = User.objects.create_user(
+            username="student2",
+            password="Old-password-1",
+            email="student2@example.com",
+            first_name="王",
+            last_name="小明",
+        )
+        staff = User.objects.create_superuser("boss", "boss@example.com", "Old-password-1")
+        course_store.ensure_seeded()
+        enrolled, _message = course_store.enroll_course(str(student.pk), "CS101")
+        self.assertTrue(enrolled)
+
+        self.client.force_login(student)
+        denied = self.client.get("/admin/timetable/enrollment/")
+        self.assertNotEqual(denied.status_code, 200)
+
+        self.client.force_login(staff)
+        page = self.client.get("/admin/timetable/enrollment/")
+        self.assertContains(page, "student2")
+        self.assertContains(page, "student2@example.com")
+        self.assertContains(page, "王 小明")
+        found = self.client.get("/admin/timetable/enrollment/?q=小明")
+        self.assertContains(found, "student2")
+        users = self.client.get("/admin/auth/user/")
+        self.assertContains(users, "student2")
+        self.assertNotContains(users, "password")
