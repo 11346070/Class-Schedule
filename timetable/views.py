@@ -321,7 +321,10 @@ def course_list(request):
     # 取得搜尋參數
     keyword = request.GET.get('keyword', '').strip()
     course_type = request.GET.get('course_type', '').strip()
-    weekday = int(request.GET.get('weekday', 0))
+    try:
+        weekday = int(request.GET.get('weekday', 0) or 0)
+    except (TypeError, ValueError):
+        weekday = 0
     show_available = request.GET.get('show_available', '')
     
     # 搜尋課程

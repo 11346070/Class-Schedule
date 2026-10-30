@@ -154,6 +154,10 @@ class CourseListHeaderTests(TestCase):
         self.assertLess(html.find(">學分<"), html.find(">類型<"))
         self.assertNotIn(">狀態<", html)
 
+    def test_invalid_weekday_filter_does_not_crash(self):
+        response = self.client.get(reverse("course_list"), {"weekday": "abc"})
+        self.assertEqual(response.status_code, 200)
+
     def test_favorites_table_matches_the_course_list_columns(self):
         user = User.objects.create_user(username="fav-student", password="password-1a")
         course_store.ensure_seeded()
