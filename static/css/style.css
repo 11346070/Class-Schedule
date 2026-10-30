@@ -2191,8 +2191,11 @@ body {
 
 .auth-screen.auth-solo {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    min-height: 100dvh;
     padding: 72px 20px 48px;
     background:
         radial-gradient(520px 260px at 50% 0%, rgba(37, 99, 235, 0.16), transparent 68%),
@@ -2201,6 +2204,8 @@ body {
 
 .auth-solo-card {
     width: min(420px, 100%);
+    margin-top: auto;
+    margin-bottom: auto;
     background: var(--surface);
     border: 1px solid var(--border-color);
     border-radius: 18px;

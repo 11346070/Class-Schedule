@@ -69,6 +69,16 @@ class ModuleCreditLimitTests(TestCase):
         self.assertContains(response, "金融模組學分下限 3，上限 不限制")
 
 
+class RegisterPageTests(TestCase):
+    def test_register_uses_the_same_card_as_login(self):
+        response = self.client.get(reverse("register"))
+        self.assertContains(response, "auth-solo-card")
+        self.assertContains(response, "個人課表維護系統")
+        self.assertContains(response, "至少 8 個字元")
+        self.assertContains(response, "去登入")
+        self.assertNotContains(response, "auth-aside")
+
+
 class CourseListHeaderTests(TestCase):
     def test_course_code_and_credit_headers_stay_in_order(self):
         response = self.client.get(reverse("course_list"))
