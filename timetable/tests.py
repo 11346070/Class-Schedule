@@ -199,6 +199,50 @@ class AccountSettingsTests(TestCase):
         self.assertContains(response, "已達退選下限")
 
 
+class SafetyRegressionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="safety-user", password="Old-password-1")
+        self.client.force_login(self.user)
+        course_store.ensure_seeded()
+        self.user_id = str(self.user.pk)
+
+    def test_redirect_stays_inside_the_site(self):
+        external = self.client.post(reverse("add_favorite"), {
+            "course_id": "CS101",
+            "next": "https://evil.example/phish",
+        })
+        self.assertEqual(external.status_code, 302)
+        self.assertNotIn("evil.example", external.url)
+
+        internal = self.client.post(reverse("add_favorite"), {
+            "course_id": "CS102",
+            "next": "/favorites/",
+        })
+        self.assertEqual(internal.url, "/favorites/")
+
+    def test_repeat_enroll_does_not_consume_another_seat(self):
+        from timetable.models import Course
+
+        before = Course.objects.get(pk="CS201").enrolled_count
+        first, _message = course_store.enroll_course(self.user_id, "CS201")
+        second, message = course_store.enroll_course(self.user_id, "CS201")
+        self.assertTrue(first)
+        self.assertFalse(second)
+        self.assertIn("已經選過", message)
+        self.assertEqual(Course.objects.get(pk="CS201").enrolled_count, before + 1)
+
+        dropped, _message = course_store.drop_course(self.user_id, "CS201", force=True)
+        self.assertTrue(dropped)
+        self.assertEqual(Course.objects.get(pk="CS201").enrolled_count, before)
+
+    def test_repeat_favorite_is_rejected(self):
+        first, _message = course_store.add_favorite(self.user_id, "GE101")
+        second, message = course_store.add_favorite(self.user_id, "GE101")
+        self.assertTrue(first)
+        self.assertFalse(second)
+        self.assertIn("已經收藏", message)
+
+
 class AdminIdentityTests(TestCase):
     def test_staff_can_identify_users_and_students_cannot_enter_admin(self):
         student = User.objects.create_user(

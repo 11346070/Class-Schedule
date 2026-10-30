@@ -8,6 +8,8 @@ from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
+from django.urls import NoReverseMatch, reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .data_store import course_store
@@ -89,13 +91,24 @@ def redirect_after_action(request, default='course_list'):
     依表單 next 參數重導向。
     course_detail 需帶 course_id，其餘可為 URL 名稱或路徑。
     """
-    next_url = request.POST.get('next', default)
+    next_url = (request.POST.get('next') or default).strip()
     course_id = request.POST.get('course_id', '').strip()
 
     if next_url == 'course_detail' and course_id:
         return redirect('course_detail', course_id=course_id)
 
-    return redirect(next_url)
+    try:
+        return redirect(reverse(next_url))
+    except NoReverseMatch:
+        pass
+
+    if url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(default)
 
 
 PERIOD_TIMES = {

@@ -8,7 +8,7 @@
 from typing import List, Optional, Tuple
 import threading
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 
 from .models import (
@@ -298,6 +298,7 @@ class CourseDataStore:
         return True, f"可以選課！選課後將有 {current_credits + course.credits} 學分"
 
     def enroll_course(self, user_id: str, course_id: str) -> Tuple[bool, str]:
+        self.ensure_seeded()
         with self.lock:
             with transaction.atomic():
                 try:
@@ -332,7 +333,10 @@ class CourseDataStore:
                 if module_message:
                     return False, module_message
 
-                Enrollment.objects.create(user_id=user_id, course=course)
+                try:
+                    Enrollment.objects.create(user_id=user_id, course=course)
+                except IntegrityError:
+                    return False, "您已經選過這門課程"
                 course.enrolled_count += 1
                 course.save(update_fields=["enrolled_count"])
 
@@ -645,7 +649,10 @@ class CourseDataStore:
             if self.is_course_favorited(user_id, course_id):
                 return False, "您已經收藏過這門課程"
 
-            Favorite.objects.create(user_id=user_id, course=course)
+            try:
+                Favorite.objects.create(user_id=user_id, course=course)
+            except IntegrityError:
+                return False, "您已經收藏過這門課程"
             return True, f"已收藏「{course.name}」"
 
     def remove_favorite(self, user_id: str, course_id: str) -> Tuple[bool, str]:
