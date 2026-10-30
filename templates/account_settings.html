@@ -9,7 +9,7 @@
 </div>
 
 <div class="settings-layout">
-        <div class="detail-card">
+        <div class="detail-card settings-panel">
             <h2>修改密碼</h2>
             <form method="post" action="{% url 'account_settings' %}" class="settings-form">
                 {% csrf_token %}
@@ -47,10 +47,13 @@
                 </div>
                 <button type="submit" class="btn btn-primary">更新密碼</button>
             </form>
+            <form method="post" action="{% url 'logout' %}" class="logout-row" data-confirm="確定要登出嗎？">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline">登出</button>
+            </form>
         </div>
 
-        <div class="settings-side">
-        <div class="detail-card">
+        <div class="detail-card settings-panel">
             <h2>頭貼</h2>
             <form method="post" action="{% url 'account_settings' %}" enctype="multipart/form-data" class="avatar-form">
                 {% csrf_token %}
@@ -71,12 +74,6 @@
                 <p class="credit-note">接受 JPG、JPEG、PNG、WEBP，檔案最大 2MB。</p>
                 <button type="submit" class="btn btn-primary">更新頭貼</button>
             </form>
-        </div>
-
-        <form method="post" action="{% url 'logout' %}" class="logout-row" data-confirm="確定要登出嗎？">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline">登出</button>
-        </form>
         </div>
 </div>
 {% endblock %}
