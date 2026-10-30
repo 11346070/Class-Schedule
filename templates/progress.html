@@ -59,6 +59,9 @@
         {% else %}
         <p>選擇金融或資訊後，才會計算另一模組最多可認列的學分。</p>
         {% endif %}
+        {% for note in module_limit_notes %}
+        <p class="credit-note">{{ note }}</p>
+        {% endfor %}
     </div>
 </div>
 

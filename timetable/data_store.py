@@ -19,6 +19,7 @@ from .models import (
     Enrollment,
     Favorite,
     GraduationRequirement,
+    ModuleCreditLimit,
     StudentProfile,
     StudyRecord,
     UserCreditLimit,
@@ -211,6 +212,56 @@ class CourseDataStore:
         )
         return True
 
+    def get_module_credit_limit(self, module: str) -> ModuleCreditLimit:
+        rule, _ = ModuleCreditLimit.objects.get_or_create(
+            module=module,
+            defaults={"min_credits": 0, "max_credits": 0},
+        )
+        return rule
+
+    def module_credits(self, user_id: str, module: str) -> int:
+        return sum(
+            Enrollment.objects.filter(
+                user_id=user_id, course__module=module
+            ).values_list("course__credits", flat=True)
+        )
+
+    def _module_limit_message(self, user_id: str, course: Course, adding: bool) -> Optional[str]:
+        if course.module not in (MODULE_INFO, MODULE_FINANCE):
+            return None
+        rule = self.get_module_credit_limit(course.module)
+        current = self.module_credits(user_id, course.module)
+        after = current + course.credits if adding else current - course.credits
+        if adding and rule.max_credits and after > rule.max_credits:
+            return (
+                f"超過{course.module}模組學分上限：目前 {current} 學分，"
+                f"選課後將達 {after} 學分，上限為 {rule.max_credits} 學分。"
+            )
+        if (not adding) and rule.min_credits and after < rule.min_credits:
+            return (
+                f"低於{course.module}模組學分下限：退選後將剩 {after} 學分，"
+                f"下限為 {rule.min_credits} 學分。請聯絡管理員協助退選。"
+            )
+        return None
+
+    def get_module_limit_notes(self, user_id: str) -> List[str]:
+        """已選課程超出管理員後來調整的上下限時，只提示，不退選。"""
+        notes = []
+        for module in (MODULE_INFO, MODULE_FINANCE):
+            rule = self.get_module_credit_limit(module)
+            current = self.module_credits(user_id, module)
+            if rule.max_credits and current > rule.max_credits:
+                notes.append(
+                    f"{module}模組目前 {current} 學分，已超過管理員設定的上限 "
+                    f"{rule.max_credits} 學分。已選課程會保留，不會自動退選。"
+                )
+            elif rule.min_credits and current and current < rule.min_credits:
+                notes.append(
+                    f"{module}模組目前 {current} 學分，低於管理員設定的下限 "
+                    f"{rule.min_credits} 學分。已選課程會保留，不會自動退選。"
+                )
+        return notes
+
     def check_enrollment_eligibility(
         self, user_id: str, course_id: str
     ) -> Tuple[bool, str]:
@@ -239,6 +290,10 @@ class CourseDataStore:
                 f"超過學分上限：目前 {current_credits} 學分，選課後將達 "
                 f"{current_credits + course.credits} 學分，上限為 {credit_limit} 學分",
             )
+
+        module_message = self._module_limit_message(user_id, course, adding=True)
+        if module_message:
+            return False, module_message
 
         return True, f"可以選課！選課後將有 {current_credits + course.credits} 學分"
 
@@ -272,6 +327,10 @@ class CourseDataStore:
                         False,
                         f"超過學分上限：目前 {current_credits} 學分，上限為 {credit_limit} 學分",
                     )
+
+                module_message = self._module_limit_message(user_id, course, adding=True)
+                if module_message:
+                    return False, module_message
 
                 Enrollment.objects.create(user_id=user_id, course=course)
                 course.enrolled_count += 1
@@ -307,6 +366,13 @@ class CourseDataStore:
                         f"{remaining} 學分，下限為 {credit_floor} 學分。"
                         "請聯絡管理員協助退選。",
                     )
+
+                if not force:
+                    module_message = self._module_limit_message(
+                        user_id, course, adding=False
+                    )
+                    if module_message:
+                        return False, module_message
 
                 enrollment.delete()
                 if course.enrolled_count > 0:

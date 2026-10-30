@@ -163,6 +163,7 @@ def index(request):
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')
         ],
         'periods': range(1, 14),
+        'module_limit_notes': course_store.get_module_limit_notes(user_id),
         'export_payload': {
             'username': request.user.username,
             'display_name': request.user.get_full_name() or request.user.username,
@@ -264,6 +265,7 @@ def progress(request):
         {
             "summary": summary,
             "module_summary": course_store.get_module_summary(user_id),
+            "module_limit_notes": course_store.get_module_limit_notes(user_id),
             "history_page": history_page,
             "history_total": len(history),
             "semesters": semesters,

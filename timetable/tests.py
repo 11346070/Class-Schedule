@@ -5,6 +5,52 @@ from django.urls import reverse
 from timetable.data_store import course_store
 
 
+class ModuleCreditLimitTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="module-student", password="password-1a")
+        course_store.ensure_seeded()
+        self.user_id = str(self.user.pk)
+
+    def test_default_limits_do_not_block_or_remove_courses(self):
+        enrolled, _message = course_store.enroll_course(self.user_id, "CS301")
+        self.assertTrue(enrolled)
+        self.assertEqual(course_store.get_module_limit_notes(self.user_id), [])
+
+        from timetable.models import ModuleCreditLimit
+
+        ModuleCreditLimit.objects.update_or_create(
+            module="資訊", defaults={"min_credits": 0, "max_credits": 2}
+        )
+        self.assertTrue(course_store.is_user_enrolled(self.user_id, "CS301"))
+        notes = course_store.get_module_limit_notes(self.user_id)
+        self.assertEqual(len(notes), 1)
+        self.assertIn("不會自動退選", notes[0])
+
+        allowed, message = course_store.enroll_course(self.user_id, "CS302")
+        self.assertFalse(allowed)
+        self.assertIn("資訊模組學分上限", message)
+
+    def test_module_minimum_blocks_drop_but_admin_force_still_works(self):
+        from timetable.models import ModuleCreditLimit, UserCreditLimit
+
+        UserCreditLimit.objects.update_or_create(
+            user_id=self.user_id,
+            defaults={"credit_floor": 0, "credit_limit": 25},
+        )
+        course_store.enroll_course(self.user_id, "FIN201")
+        ModuleCreditLimit.objects.update_or_create(
+            module="金融", defaults={"min_credits": 3, "max_credits": 0}
+        )
+        dropped, message = course_store.drop_course(self.user_id, "FIN201")
+        self.assertFalse(dropped)
+        self.assertIn("金融模組學分下限", message)
+        self.assertTrue(course_store.is_user_enrolled(self.user_id, "FIN201"))
+
+        forced, _message = course_store.drop_course(self.user_id, "FIN201", force=True)
+        self.assertTrue(forced)
+        self.assertFalse(course_store.is_user_enrolled(self.user_id, "FIN201"))
+
+
 class CourseListHeaderTests(TestCase):
     def test_course_code_and_credit_headers_stay_in_order(self):
         response = self.client.get(reverse("course_list"))

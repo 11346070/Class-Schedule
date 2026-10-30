@@ -247,6 +247,32 @@ class StudentProfile(models.Model):
         return f"{self.user_id}: {self.module or '未選'}"
 
 
+class ModuleCreditLimit(models.Model):
+    """模組學分上下限。0 表示這一端不額外限制，既有選課不會被刪除。"""
+    module = models.CharField("模組", max_length=20, primary_key=True)
+    min_credits = models.PositiveIntegerField("最低學分", default=0)
+    max_credits = models.PositiveIntegerField(
+        "最高學分",
+        default=0,
+        help_text="0 表示不限制上限。",
+    )
+
+    class Meta:
+        verbose_name = "模組學分限制"
+        verbose_name_plural = "模組學分限制"
+
+    def __str__(self):
+        upper = "不限" if not self.max_credits else str(self.max_credits)
+        return f"{self.module}：{self.min_credits}–{upper}"
+
+    def clean(self):
+        super().clean()
+        if self.module not in (MODULE_INFO, MODULE_FINANCE):
+            raise ValidationError({"module": "目前只使用資訊與金融模組。"})
+        if self.max_credits and self.min_credits > self.max_credits:
+            raise ValidationError({"max_credits": "最高學分不可低於最低學分。"})
+
+
 class UserCreditLimit(models.Model):
     """使用者學分上限與下限"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)

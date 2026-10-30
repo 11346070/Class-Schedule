@@ -72,6 +72,9 @@
     {% elif total_credits == credit_limit and notify_at_limit %}
     <p class="credit-note">已達學分上限，無法再選會超過上限的課。</p>
     {% endif %}
+    {% for note in module_limit_notes %}
+    <p class="credit-note">{{ note }}</p>
+    {% endfor %}
 </section>
 
 <!-- 每週課表 -->

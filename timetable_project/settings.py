@@ -143,6 +143,11 @@ SIMPLEUI_CONFIG = {
                     'url': 'timetable/graduationrequirement/',
                 },
                 {
+                    'name': '模組學分限制',
+                    'icon': 'fas fa-sliders-h',
+                    'url': 'timetable/modulecreditlimit/',
+                },
+                {
                     'name': '課程評價',
                     'icon': 'fas fa-comment',
                     'url': 'timetable/coursereview/',

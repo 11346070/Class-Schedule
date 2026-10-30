@@ -11,6 +11,7 @@ from .models import (
     Favorite,
     CourseReview,
     GraduationRequirement,
+    ModuleCreditLimit,
     StudentProfile,
     StudyRecord,
     UserCreditLimit,
@@ -77,6 +78,13 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
         "general_credits",
         "recognition_cap",
     )
+
+
+@admin.register(ModuleCreditLimit)
+class ModuleCreditLimitAdmin(admin.ModelAdmin):
+    list_display = ("module", "min_credits", "max_credits")
+    ordering = ("module",)
+    list_per_page = 25
 
 
 @admin.register(CourseReview)
