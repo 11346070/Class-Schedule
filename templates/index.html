@@ -6,18 +6,30 @@
 <div class="page-header page-header-split">
     <div>
         <h1>我的課表總覽</h1>
-        <p class="lead">本學期已選學分、退選下限，以及這一週的課。</p>
+        <p class="lead">這一週的課，以及本學期已選學分。</p>
     </div>
     <a class="btn btn-secondary" href="{% url 'progress' %}">查看畢業進度</a>
 </div>
-<section class="detail-card credit-overview">
-    <div class="overview-top">
-        <div>
-            <p class="eyebrow">本學期學分</p>
-            <p class="overview-score">{{ total_credits }}<small>/ {{ credit_limit }} 學分</small></p>
-            <p class="lead">已選 {{ enrolled_count }} 門 · 還可再選 {{ remaining_credits }} 學分</p>
+
+<section class="home-summary" aria-label="本學期學分">
+    <div class="home-stats">
+        <div class="home-stat">
+            <span>已選學分</span>
+            <strong>{{ total_credits }}<small> / {{ credit_limit }}</small></strong>
         </div>
-        <div class="overview-side">
+        <div class="home-stat">
+            <span>已選門數</span>
+            <strong>{{ enrolled_count }}</strong>
+        </div>
+        <div class="home-stat">
+            <span>還可再選</span>
+            <strong>{{ remaining_credits }}<small> 學分</small></strong>
+        </div>
+        <div class="home-stat">
+            <span>退選下限</span>
+            <strong>{{ credit_floor }}</strong>
+        </div>
+        <div class="home-stat home-stat-status">
             {% if total_credits > credit_limit %}
             <span class="pill pill-warn">超過學分上限</span>
             {% elif enrolled_count and total_credits <= credit_floor %}
@@ -29,7 +41,7 @@
             {% else %}
             <span class="pill pill-ok">高於退選下限</span>
             {% endif %}
-            <p class="lead">退選下限 {{ credit_floor }}，由管理員設定</p>
+            <p>下限由管理員設定</p>
         </div>
     </div>
     <div class="meter" role="img" aria-label="已選 {{ total_credits }} 學分，上限 {{ credit_limit }}，退選下限 {{ credit_floor }}">
