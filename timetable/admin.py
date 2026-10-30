@@ -338,6 +338,10 @@ class StudyRecordAdmin(UserIdentityMixin, admin.ModelAdmin):
     readonly_fields = ("created_at",)
     actions = ("mark_passed", "mark_failed", "mark_in_progress")
 
+    def get_queryset(self, request):
+        course_store.sync_enrollment_study_records()
+        return super().get_queryset(request)
+
     def save_model(self, request, obj, form, change):
         course = obj.course
         if course is not None:

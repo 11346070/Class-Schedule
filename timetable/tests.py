@@ -402,16 +402,10 @@ class StudyRecordSyncTests(TestCase):
         enrolled, _message = course_store.enroll_course(str(student.pk), "CS101")
         self.assertTrue(enrolled)
         course = Course.objects.get(pk="CS101")
-        record = StudyRecord.objects.create(
-            user_id=str(student.pk),
-            course=course,
-            course_code=course.course_id,
-            course_name=course.name,
-            credits=course.credits,
-            course_type=course.course_type,
-            semester="113-1",
-            status=StudyRecord.STATUS_IN_PROGRESS,
+        record = StudyRecord.objects.get(
+            user_id=str(student.pk), course_code="CS101"
         )
+        self.assertEqual(record.status, StudyRecord.STATUS_IN_PROGRESS)
 
         self.client.force_login(staff)
         listing = self.client.get("/admin/timetable/studyrecord/")
@@ -443,3 +437,27 @@ class StudyRecordSyncTests(TestCase):
         self.client.force_login(student)
         progress = self.client.get(reverse("progress"))
         self.assertContains(progress, "已通過")
+
+    def test_drop_removes_only_the_in_progress_record(self):
+        from timetable.models import StudyRecord
+
+        student = User.objects.create_user(username="drop-student", password="Old-password-1")
+        course_store.ensure_seeded()
+        user_id = str(student.pk)
+        enrolled, _message = course_store.enroll_course(user_id, "CS102")
+        self.assertTrue(enrolled)
+        dropped, _message = course_store.drop_course(user_id, "CS102", force=True)
+        self.assertTrue(dropped)
+        self.assertFalse(
+            StudyRecord.objects.filter(user_id=user_id, course_code="CS102").exists()
+        )
+
+        enrolled, _message = course_store.enroll_course(user_id, "CS103")
+        self.assertTrue(enrolled)
+        kept = StudyRecord.objects.get(user_id=user_id, course_code="CS103")
+        kept.status = StudyRecord.STATUS_PASSED
+        kept.save(update_fields=["status"])
+        dropped, _message = course_store.drop_course(user_id, "CS103", force=True)
+        self.assertTrue(dropped)
+        kept.refresh_from_db()
+        self.assertEqual(kept.status, StudyRecord.STATUS_PASSED)

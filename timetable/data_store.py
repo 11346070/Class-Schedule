@@ -351,6 +351,7 @@ class CourseDataStore:
                     return False, "您已經選過這門課程"
                 course.enrolled_count += 1
                 course.save(update_fields=["enrolled_count"])
+                self.ensure_enrollment_study_record(user_id, course)
 
                 return True, f"選課成功！剩餘名額：{course.remaining_quota}"
 
@@ -394,8 +395,66 @@ class CourseDataStore:
                 if course.enrolled_count > 0:
                     course.enrolled_count -= 1
                     course.save(update_fields=["enrolled_count"])
+                self.remove_current_study_record(user_id, course.course_id)
 
                 return True, "退選成功"
+
+    def ensure_enrollment_study_record(self, user_id: str, course: Course) -> None:
+        """選課寫入一筆正在修的歷年紀錄，方便管理員改成已通過。已有紀錄則不覆寫。"""
+        if StudyRecord.objects.filter(
+            user_id=user_id, course_code=course.course_id
+        ).exists():
+            return
+        StudyRecord.objects.create(
+            user_id=user_id,
+            course=course,
+            course_code=course.course_id,
+            course_name=course.name,
+            credits=course.credits,
+            course_type=course.course_type,
+            module=course.module or "",
+            semester="本學期",
+            status=StudyRecord.STATUS_IN_PROGRESS,
+        )
+
+    def sync_enrollment_study_records(self) -> None:
+        """補上已選、但還沒有歷年紀錄的課。只處理還存在的帳號。"""
+        from django.contrib.auth.models import User
+
+        valid_ids = {str(pk) for pk in User.objects.values_list("pk", flat=True)}
+        existing = set(StudyRecord.objects.values_list("user_id", "course_code"))
+        missing = []
+        for enrollment in Enrollment.objects.select_related("course"):
+            if enrollment.user_id not in valid_ids:
+                continue
+            key = (enrollment.user_id, enrollment.course_id)
+            if key in existing:
+                continue
+            course = enrollment.course
+            missing.append(
+                StudyRecord(
+                    user_id=enrollment.user_id,
+                    course=course,
+                    course_code=course.course_id,
+                    course_name=course.name,
+                    credits=course.credits,
+                    course_type=course.course_type,
+                    module=course.module or "",
+                    semester="本學期",
+                    status=StudyRecord.STATUS_IN_PROGRESS,
+                )
+            )
+            existing.add(key)
+        if missing:
+            StudyRecord.objects.bulk_create(missing)
+
+    def remove_current_study_record(self, user_id: str, course_id: str) -> None:
+        """退選只拿掉還在修的那一筆，已通過或未通過的成績留著。"""
+        StudyRecord.objects.filter(
+            user_id=user_id,
+            course_code=course_id,
+            status=StudyRecord.STATUS_IN_PROGRESS,
+        ).delete()
 
     def _check_time_conflict(
         self, user_id: str, new_course: Course
