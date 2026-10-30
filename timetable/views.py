@@ -101,6 +101,12 @@ def syllabus_links(course):
 
 def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authenticated=True):
     """為清單上的每門課附上是否已選，以及選不了的原因。"""
+    courses = list(courses)
+    pending = [
+        course for course in courses
+        if authenticated and course.course_id not in enrolled_course_ids
+    ]
+    decisions = course_store.eligibility_for_courses(user_id, pending) if pending else {}
     courses_with_status = []
     for course in courses:
         course_dict = course.to_dict()
@@ -112,9 +118,7 @@ def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authentica
             course_dict["can_enroll"] = False
             course_dict["enroll_message"] = "已選修"
         else:
-            can_enroll, message = course_store.check_enrollment_eligibility(
-                user_id, course.course_id
-            )
+            can_enroll, message = decisions[course.course_id]
             course_dict["can_enroll"] = can_enroll
             course_dict["enroll_message"] = message
         courses_with_status.append(course_dict)
@@ -359,27 +363,26 @@ def course_list(request):
     # 篩選尚有名額的課程
     if show_available:
         courses = [c for c in courses if not c.is_full]
-    
-    # 標記使用者已選的課程和收藏的課程
+
+    paginator = Paginator(courses, 10)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
+    # 只檢查這一頁，選課條件與原本相同
     enrolled_course_ids = {c.course_id for c in course_store.get_user_enrollments(user_id)}
     favorited_course_ids = {c.course_id for c in course_store.get_user_favorites(user_id)}
-    
     courses_with_status = courses_with_enroll_status(
         user_id,
-        courses,
+        page_obj.object_list,
         enrolled_course_ids,
         authenticated=request.user.is_authenticated,
     )
     for course_dict in courses_with_status:
         course_dict['is_favorited'] = course_dict['course_id'] in favorited_course_ids
-
-    paginator = Paginator(courses_with_status, 10)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
     query_params = request.GET.copy()
     query_params.pop('page', None)
 
     context = {
-        'courses': page_obj,
+        'courses': courses_with_status,
         'page_obj': page_obj,
         'querystring': query_params.urlencode(),
         'page_items': page_items(page_obj),

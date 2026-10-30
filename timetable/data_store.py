@@ -114,29 +114,34 @@ class CourseDataStore:
 
     def _ensure_module_courses(self):
         """標記資訊模組選修，並補上金融模組示範課。已存在的課不會被覆蓋內容。"""
-        Course.objects.filter(
-            course_id__in=["CS301", "CS302", "CS303", "CS304"]
-        ).update(module=MODULE_INFO)
+        info_ids = ["CS301", "CS302", "CS303", "CS304"]
+        if Course.objects.filter(course_id__in=info_ids).exclude(module=MODULE_INFO).exists():
+            Course.objects.filter(course_id__in=info_ids).update(module=MODULE_INFO)
         finance_courses = [
             ("FIN201", "金融市場", "金教授", 5, 2, 4, 3, "選修", "全校", 40),
             ("FIN202", "投資學", "投教授", 4, 6, 8, 3, "選修", "全校", 40),
         ]
+        present = set(
+            Course.objects.filter(
+                course_id__in=[row[0] for row in finance_courses]
+            ).values_list("course_id", flat=True)
+        )
         for cid, name, teacher, weekday, start, end, credits, ctype, target, quota in finance_courses:
-            Course.objects.get_or_create(
+            if cid in present:
+                continue
+            Course.objects.create(
                 course_id=cid,
-                defaults={
-                    "name": name,
-                    "teacher": teacher,
-                    "weekday": weekday,
-                    "start_period": start,
-                    "end_period": end,
-                    "credits": credits,
-                    "course_type": ctype,
-                    "module": MODULE_FINANCE,
-                    "target_class": target,
-                    "total_quota": quota,
-                    "enrolled_count": 0,
-                },
+                name=name,
+                teacher=teacher,
+                weekday=weekday,
+                start_period=start,
+                end_period=end,
+                credits=credits,
+                course_type=ctype,
+                module=MODULE_FINANCE,
+                target_class=target,
+                total_quota=quota,
+                enrolled_count=0,
             )
 
     def get_course(self, course_id: str) -> Optional[Course]:
@@ -274,40 +279,70 @@ class CourseDataStore:
                 )
         return notes
 
+    def eligibility_for_courses(self, user_id: str, courses: List[Course]) -> dict:
+        """用同一份已選課、學分與模組資料，一次判斷多門課能不能選。"""
+        enrolled = self.get_user_enrollments(user_id) if user_id else []
+        total_credits = sum(course.credits for course in enrolled)
+        credit_limit = self.get_user_credit_limit(user_id)
+        rules = {
+            module: self.get_module_credit_limit(module)
+            for module in (MODULE_INFO, MODULE_FINANCE)
+        }
+        module_totals = {
+            module: self.module_credits(user_id, module) for module in rules
+        } if user_id else {module: 0 for module in rules}
+        decisions = {}
+        for course in courses:
+            decisions[course.course_id] = self._eligibility_from_cache(
+                course, enrolled, total_credits, credit_limit, rules, module_totals
+            )
+        return decisions
+
+    def _eligibility_from_cache(
+        self, course, enrolled, total_credits, credit_limit, rules, module_totals
+    ) -> Tuple[bool, str]:
+        if any(existing.course_id == course.course_id for existing in enrolled):
+            return False, "您已經選過這門課程"
+        if course.is_full:
+            return False, f"課程已額滿（{course.total_quota}/{course.total_quota}）"
+        for existing in enrolled:
+            if existing.weekday != course.weekday:
+                continue
+            if self._periods_overlap(
+                existing.start_period,
+                existing.end_period,
+                course.start_period,
+                course.end_period,
+            ):
+                return (
+                    False,
+                    f"時間衝突：與「{existing.name}」（{existing.get_time_display()}）衝堂",
+                )
+        if total_credits + course.credits > credit_limit:
+            return (
+                False,
+                f"超過學分上限：目前 {total_credits} 學分，選課後將達 "
+                f"{total_credits + course.credits} 學分，上限為 {credit_limit} 學分",
+            )
+        rule = rules.get(course.module)
+        if rule is not None and rule.max_credits:
+            current = module_totals.get(course.module, 0)
+            after = current + course.credits
+            if after > rule.max_credits:
+                return (
+                    False,
+                    f"超過{course.module}模組學分上限：目前 {current} 學分，"
+                    f"選課後將達 {after} 學分，上限為 {rule.max_credits} 學分。",
+                )
+        return True, f"可以選課！選課後將有 {total_credits + course.credits} 學分"
+
     def check_enrollment_eligibility(
         self, user_id: str, course_id: str
     ) -> Tuple[bool, str]:
         course = self.get_course(course_id)
         if not course:
             return False, "課程不存在"
-
-        if self.is_user_enrolled(user_id, course_id):
-            return False, "您已經選過這門課程"
-
-        if course.is_full:
-            return False, f"課程已額滿（{course.total_quota}/{course.total_quota}）"
-
-        conflict_course = self._check_time_conflict(user_id, course)
-        if conflict_course:
-            return (
-                False,
-                f"時間衝突：與「{conflict_course.name}」（{conflict_course.get_time_display()}）衝堂",
-            )
-
-        current_credits = self.get_user_total_credits(user_id)
-        credit_limit = self.get_user_credit_limit(user_id)
-        if current_credits + course.credits > credit_limit:
-            return (
-                False,
-                f"超過學分上限：目前 {current_credits} 學分，選課後將達 "
-                f"{current_credits + course.credits} 學分，上限為 {credit_limit} 學分",
-            )
-
-        module_message = self._module_limit_message(user_id, course, adding=True)
-        if module_message:
-            return False, module_message
-
-        return True, f"可以選課！選課後將有 {current_credits + course.credits} 學分"
+        return self.eligibility_for_courses(user_id, [course])[course.course_id]
 
     def enroll_course(self, user_id: str, course_id: str) -> Tuple[bool, str]:
         self.ensure_seeded()
