@@ -54,6 +54,20 @@ class ModuleCreditLimitTests(TestCase):
         self.assertTrue(forced)
         self.assertFalse(course_store.is_user_enrolled(self.user_id, "FIN201"))
 
+    def test_progress_page_shows_the_admin_module_limits(self):
+        from timetable.models import ModuleCreditLimit
+
+        ModuleCreditLimit.objects.update_or_create(
+            module="資訊", defaults={"min_credits": 6, "max_credits": 12}
+        )
+        ModuleCreditLimit.objects.update_or_create(
+            module="金融", defaults={"min_credits": 3, "max_credits": 0}
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("progress"))
+        self.assertContains(response, "資訊模組學分下限 6，上限 12")
+        self.assertContains(response, "金融模組學分下限 3，上限 不限制")
+
 
 class CourseListHeaderTests(TestCase):
     def test_course_code_and_credit_headers_stay_in_order(self):

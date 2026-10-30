@@ -219,6 +219,18 @@ class CourseDataStore:
         )
         return rule
 
+    def get_module_limit_rows(self) -> List[dict]:
+        """前台顯示管理員設定的模組學分上下限。0 代表這一端不限制。"""
+        rows = []
+        for module in (MODULE_INFO, MODULE_FINANCE):
+            rule = self.get_module_credit_limit(module)
+            rows.append({
+                "module": module,
+                "min_label": str(rule.min_credits) if rule.min_credits else "不限制",
+                "max_label": str(rule.max_credits) if rule.max_credits else "不限制",
+            })
+        return rows
+
     def module_credits(self, user_id: str, module: str) -> int:
         return sum(
             Enrollment.objects.filter(

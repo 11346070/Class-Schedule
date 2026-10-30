@@ -51,6 +51,9 @@
     </form>
     <div class="progress-lines">
         <p>認列上限：{{ module_summary.cap }} 學分</p>
+        {% for limit in module_limits %}
+        <p>{{ limit.module }}模組學分下限 {{ limit.min_label }}，上限 {{ limit.max_label }}。</p>
+        {% endfor %}
         {% if module_summary.mine %}
         <p>另一模組（{{ module_summary.other }}）已通過 {{ module_summary.other_passed }} 學分，可相互認列 {{ module_summary.recognized }} 學分。</p>
         {% if module_summary.overflow %}

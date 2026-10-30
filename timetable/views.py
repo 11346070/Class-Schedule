@@ -286,6 +286,7 @@ def progress(request):
         {
             "summary": summary,
             "module_summary": course_store.get_module_summary(user_id),
+            "module_limits": course_store.get_module_limit_rows(),
             "module_limit_notes": course_store.get_module_limit_notes(user_id),
             "history_page": history_page,
             "history_total": len(history),
