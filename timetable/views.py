@@ -214,7 +214,7 @@ def index(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def account_settings(request):
-    """個人設定：帳號、密碼、學分規則與主修模組。"""
+    """個人設定：修改密碼與頭貼。主修模組改在修課進度設定。"""
     user_id = get_user_id(request)
     password_form = StyledPasswordChangeForm(request.user)
     avatar_form = AvatarUploadForm()

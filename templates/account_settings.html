@@ -8,8 +8,7 @@
     <p class="lead">帳號 {{ user.username }}</p>
 </div>
 
-<div class="settings-grid">
-    <div class="settings-col">
+<div class="settings-stack">
         <div class="detail-card">
             <h2>修改密碼</h2>
             <form method="post" action="{% url 'account_settings' %}" class="settings-form">
@@ -50,29 +49,7 @@
             </form>
         </div>
 
-        <form method="post" action="{% url 'logout' %}" class="logout-row" data-confirm="確定要登出嗎？">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline">登出</button>
-        </form>
-    </div>
-
-    <div class="settings-col">
         <div class="detail-card">
-            <h2>本學期學分規則</h2>
-            <dl class="readonly-list">
-                <div>
-                    <dt>學分上限</dt>
-                    <dd>{{ credit_limit }}</dd>
-                </div>
-                <div>
-                    <dt>退選下限</dt>
-                    <dd>{{ credit_floor }}</dd>
-                </div>
-            </dl>
-            <p class="credit-note">上下限由管理員設定。退選後若低於下限，只能請管理員協助退選。</p>
-        </div>
-
-        <div class="detail-card stack-card">
             <h2>頭貼</h2>
             <form method="post" action="{% url 'account_settings' %}" enctype="multipart/form-data" class="avatar-form">
                 {% csrf_token %}
@@ -95,23 +72,9 @@
             </form>
         </div>
 
-        <div class="detail-card stack-card">
-            <h2>主修模組</h2>
-            <form method="post" action="{% url 'account_settings' %}" class="module-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="module">
-                <div class="form-group">
-                    <label for="module">模組</label>
-                    <select id="module" name="module" class="form-control">
-                        <option value="">請選擇</option>
-                        <option value="資訊" {% if module == "資訊" %}selected{% endif %}>資訊</option>
-                        <option value="金融" {% if module == "金融" %}selected{% endif %}>金融</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
-            </form>
-            <p>另一模組最多可認列的學分，會顯示在<a href="{% url 'progress' %}">修課進度</a>。</p>
-        </div>
-    </div>
+        <form method="post" action="{% url 'logout' %}" class="logout-row" data-confirm="確定要登出嗎？">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline">登出</button>
+        </form>
 </div>
 {% endblock %}

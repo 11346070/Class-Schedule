@@ -122,6 +122,9 @@ class AccountSettingsTests(TestCase):
         response = self.client.get(reverse("account_settings"))
         self.assertContains(response, "修改密碼")
         self.assertContains(response, "頭貼")
+        self.assertLess(response.content.decode().find("修改密碼"), response.content.decode().find("頭貼"))
+        self.assertNotContains(response, "本學期學分規則")
+        self.assertNotContains(response, "主修模組")
         self.assertNotContains(response, "首頁提醒")
         self.assertNotContains(response, "notify_at_floor")
 
