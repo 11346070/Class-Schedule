@@ -675,24 +675,26 @@ body {
 }
 
 /* === 課程清單：狀態與操作欄 === */
-.course-table-wrapper {
-    overflow-x: visible;
+.course-table-wrapper:has(.course-list-table) {
+    overflow: visible;
+    max-width: 100%;
 }
 
 .course-table.course-list-table {
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     table-layout: fixed;
 }
 
-.course-table.course-list-table th:nth-child(1) { width: 10%; }
-.course-table.course-list-table th:nth-child(2) { width: 22%; }
+.course-table.course-list-table th:nth-child(1) { width: 11%; }
+.course-table.course-list-table th:nth-child(2) { width: 18%; }
 .course-table.course-list-table th:nth-child(3) { width: 12%; }
-.course-table.course-list-table th:nth-child(4) { width: 14%; }
-.course-table.course-list-table th:nth-child(5) { width: 8%; }
+.course-table.course-list-table th:nth-child(4) { width: 13%; }
+.course-table.course-list-table th:nth-child(5) { width: 7%; }
 .course-table.course-list-table th:nth-child(6) { width: 8%; }
 .course-table.course-list-table th:nth-child(7) { width: 8%; }
-.course-table.course-list-table th:nth-child(8) { width: 18%; }
+.course-table.course-list-table th:nth-child(8) { width: 23%; }
 
 .course-table.course-list-table thead th:nth-child(1),
 .course-table.course-list-table thead th:nth-child(5) {
@@ -714,8 +716,9 @@ body {
 }
 
 .course-table.course-list-table .col-actions {
-    width: 1%;
-    padding-left: 1.25rem;
+    width: 23%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .course-status-block {
@@ -740,11 +743,12 @@ body {
 }
 
 .course-actions {
-    display: inline-flex;
+    display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+    max-width: 100%;
 }
 
 .course-actions form {
@@ -1414,7 +1418,8 @@ body {
     }
 
     .course-table-wrapper:has(.course-list-table) {
-        overflow-x: visible;
+        overflow: visible;
+        max-width: 100%;
     }
 
     .course-table.course-list-table .course-actions {
@@ -2300,6 +2305,7 @@ html[data-theme="dark"] .course-actions .btn:disabled:hover {
 @media (max-width: 1100px) {
     .course-table-wrapper:has(.course-list-table) {
         overflow: visible;
+        max-width: 100%;
         background: transparent;
         box-shadow: none;
     }
