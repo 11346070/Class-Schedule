@@ -269,17 +269,75 @@ body {
     text-align: center;
 }
 
-.pagination {
+.pager {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+    margin: 0.25rem 0 2rem;
+    max-width: 100%;
+}
+
+.pager-meta {
+    justify-self: start;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.pager-nav {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
-    margin: 0.5rem 0 2rem;
+    max-width: 100%;
 }
 
-.pagination .btn {
-    min-width: 2.5rem;
+.pager-btn {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.45rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.pager-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.pager-btn.is-current,
+.pager-btn.is-current:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.pager-btn.is-disabled {
+    color: var(--text-muted);
+    cursor: default;
+}
+
+.pager-gap {
+    color: var(--text-secondary);
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.pager-now {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
 .auth-card .errorlist {

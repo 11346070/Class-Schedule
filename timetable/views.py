@@ -22,6 +22,31 @@ from .forms import (
 )
 
 
+def page_items(page):
+    """頁碼列只留目前頁附近的數字，中間太長就用省略號。"""
+    total = page.paginator.num_pages
+    current = page.number
+    if total <= 7:
+        return list(range(1, total + 1))
+    if current <= 4:
+        window = [1, 2, 3, 4, 5]
+    elif current >= total - 3:
+        window = list(range(total - 4, total + 1))
+    else:
+        window = [current - 2, current - 1, current, current + 1, current + 2]
+    items = []
+    if window[0] > 1:
+        items.append(1)
+        if window[0] > 2:
+            items.append("ellipsis")
+    items.extend(window)
+    if window[-1] < total:
+        if window[-1] < total - 1:
+            items.append("ellipsis")
+        items.append(total)
+    return items
+
+
 class StyledLoginView(LoginView):
     template_name = "login.html"
     authentication_form = StyledAuthenticationForm
@@ -309,6 +334,7 @@ def progress(request):
             "status_filter": status_filter,
             "semester_filter": semester_filter,
             "history_query": query_params.urlencode(),
+            "history_page_items": page_items(history_page),
         },
     )
 
@@ -356,6 +382,7 @@ def course_list(request):
         'courses': page_obj,
         'page_obj': page_obj,
         'querystring': query_params.urlencode(),
+        'page_items': page_items(page_obj),
         'total_count': paginator.count,
         'keyword': keyword,
         'course_type': course_type,

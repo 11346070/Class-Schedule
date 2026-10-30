@@ -131,23 +131,7 @@
             </tbody>
         </table>
     </div>
-    {% if history_page.has_other_pages %}
-    <nav class="pagination" aria-label="歷年紀錄分頁">
-        {% if history_page.has_previous %}
-        <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ history_page.previous_page_number }}">上一頁</a>
-        {% endif %}
-        {% for num in history_page.paginator.page_range %}
-            {% if num == history_page.number %}
-            <span class="btn btn-primary btn-sm">{{ num }}</span>
-            {% else %}
-            <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-        {% if history_page.has_next %}
-        <a class="btn btn-secondary btn-sm" href="?{% if history_query %}{{ history_query }}&{% endif %}page={{ history_page.next_page_number }}">下一頁</a>
-        {% endif %}
-    </nav>
-    {% endif %}
+    {% include "includes/pagination.html" with page=history_page items=history_page_items total=history_total query=history_query label="歷年紀錄分頁" %}
     {% else %}
     <div class="empty-state">
         <p>目前沒有符合條件的修課紀錄。</p>

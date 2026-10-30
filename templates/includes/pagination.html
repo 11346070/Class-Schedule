@@ -1,0 +1,27 @@
+{% if page.has_other_pages %}
+<nav class="pager" aria-label="{{ label }}">
+    <p class="pager-meta">共 {{ total }} 筆資料，每頁 {{ page.paginator.per_page }} 筆</p>
+    <div class="pager-nav">
+        {% if page.has_previous %}
+        <a class="pager-btn" href="?{% if query %}{{ query }}&{% endif %}page={{ page.previous_page_number }}" aria-label="上一頁">&lt;</a>
+        {% else %}
+        <span class="pager-btn is-disabled" aria-hidden="true">&lt;</span>
+        {% endif %}
+        {% for item in items %}
+            {% if item == "ellipsis" %}
+            <span class="pager-gap">...</span>
+            {% elif item == page.number %}
+            <span class="pager-btn is-current" aria-current="page">{{ item }}</span>
+            {% else %}
+            <a class="pager-btn" href="?{% if query %}{{ query }}&{% endif %}page={{ item }}">{{ item }}</a>
+            {% endif %}
+        {% endfor %}
+        {% if page.has_next %}
+        <a class="pager-btn" href="?{% if query %}{{ query }}&{% endif %}page={{ page.next_page_number }}" aria-label="下一頁">&gt;</a>
+        {% else %}
+        <span class="pager-btn is-disabled" aria-hidden="true">&gt;</span>
+        {% endif %}
+    </div>
+    <p class="pager-now">目前第 {{ page.number }} 頁</p>
+</nav>
+{% endif %}
