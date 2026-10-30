@@ -2,8 +2,18 @@
 課程與選課相關資料模型（SQLite）
 """
 
+from pathlib import Path
+
 from django.core.exceptions import ValidationError
 from django.db import models
+
+
+def avatar_upload_to(instance, filename):
+    """只用使用者自己的 ID 當檔名，避免沿用上傳檔名。"""
+    suffix = Path(filename).suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+        suffix = ".img"
+    return f"avatars/{instance.user_id}{suffix}"
 
 DEFAULT_CREDIT_LIMIT = 25
 DEFAULT_CREDIT_FLOOR = 9
@@ -238,6 +248,7 @@ class StudentProfile(models.Model):
     notify_at_floor = models.BooleanField("已達退選下限時提醒", default=True)
     notify_near_floor = models.BooleanField("接近退選下限時提醒", default=True)
     notify_at_limit = models.BooleanField("已達學分上限時提醒", default=True)
+    avatar = models.FileField("頭貼", upload_to=avatar_upload_to, blank=True)
 
     class Meta:
         verbose_name = "學生模組"

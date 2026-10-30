@@ -1,8 +1,12 @@
+import tempfile
+
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from timetable.data_store import course_store
+from timetable.models import StudentProfile
 
 
 class ModuleCreditLimitTests(TestCase):
@@ -105,3 +109,91 @@ class HomepageTests(TestCase):
         self.assertContains(response, "alert-success")
         self.assertContains(response, "已登出")
         self.assertContains(response, "完成")
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class AccountSettingsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="avatar-user", password="Old-password-1")
+        self.other = User.objects.create_user(username="other-user", password="Old-password-1")
+        self.client.force_login(self.user)
+
+    def test_settings_keeps_password_and_removes_notification_controls(self):
+        response = self.client.get(reverse("account_settings"))
+        self.assertContains(response, "修改密碼")
+        self.assertContains(response, "頭貼")
+        self.assertNotContains(response, "首頁提醒")
+        self.assertNotContains(response, "notify_at_floor")
+
+    def test_password_change_uses_django_hashing(self):
+        wrong = self.client.post(reverse("account_settings"), {
+            "action": "password",
+            "old_password": "not-the-password",
+            "new_password1": "New-password-2",
+            "new_password2": "New-password-2",
+        })
+        self.assertEqual(wrong.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Old-password-1"))
+
+        mismatch = self.client.post(reverse("account_settings"), {
+            "action": "password",
+            "old_password": "Old-password-1",
+            "new_password1": "New-password-2",
+            "new_password2": "New-password-3",
+        })
+        self.assertEqual(mismatch.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("Old-password-1"))
+
+        changed = self.client.post(reverse("account_settings"), {
+            "action": "password",
+            "old_password": "Old-password-1",
+            "new_password1": "New-password-2",
+            "new_password2": "New-password-2",
+        }, follow=True)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("New-password-2"))
+        self.assertTrue(self.user.password.startswith("pbkdf2_"))
+        self.assertContains(changed, "密碼已更新")
+
+    def test_avatar_upload_only_changes_the_signed_in_user(self):
+        upload = SimpleUploadedFile("evil.svg", b"\x89PNG\r\n\x1a\n" + b"\x00" * 24, content_type="image/svg+xml")
+        self.client.post(reverse("account_settings"), {
+            "action": "avatar",
+            "user_id": str(self.other.pk),
+            "avatar": upload,
+        }, follow=True)
+        profile = StudentProfile.objects.get(pk=str(self.user.pk))
+        self.assertTrue(profile.avatar.name.endswith(".png"))
+        other = StudentProfile.objects.filter(pk=str(self.other.pk)).first()
+        self.assertTrue(other is None or not other.avatar)
+
+        rejected = self.client.post(reverse("account_settings"), {
+            "action": "avatar",
+            "avatar": SimpleUploadedFile("note.txt", b"not an image", content_type="text/plain"),
+        })
+        self.assertContains(rejected, "只接受")
+
+        oversized = SimpleUploadedFile(
+            "big.png",
+            b"\x89PNG\r\n\x1a\n" + b"\x00" * (2 * 1024 * 1024),
+            content_type="image/png",
+        )
+        too_big = self.client.post(reverse("account_settings"), {"action": "avatar", "avatar": oversized})
+        self.assertContains(too_big, "2MB")
+
+    def test_homepage_reminder_follows_the_system_rule(self):
+        course_store.ensure_seeded()
+        StudentProfile.objects.update_or_create(
+            user_id=str(self.user.pk),
+            defaults={
+                "notify_at_floor": False,
+                "notify_near_floor": False,
+                "notify_at_limit": False,
+            },
+        )
+        enrolled, _message = course_store.enroll_course(str(self.user.pk), "CS101")
+        self.assertTrue(enrolled)
+        response = self.client.get(reverse("index"))
+        self.assertContains(response, "已達退選下限")

@@ -73,23 +73,25 @@
         </div>
 
         <div class="detail-card stack-card">
-            <h2>首頁提醒</h2>
-            <p class="lead">只決定首頁要不要顯示提醒，不會改變選課或退選規則。</p>
-            <form method="post" action="{% url 'account_settings' %}" class="notice-form">
+            <h2>頭貼</h2>
+            <form method="post" action="{% url 'account_settings' %}" enctype="multipart/form-data" class="avatar-form">
                 {% csrf_token %}
-                <input type="hidden" name="action" value="notifications">
-                <label class="toggle-row">
-                    <span>已達退選下限時提醒</span>
-                    <input type="checkbox" name="notify_at_floor" {% if notify_at_floor %}checked{% endif %} onchange="this.form.requestSubmit()">
-                </label>
-                <label class="toggle-row">
-                    <span>接近退選下限時提醒</span>
-                    <input type="checkbox" name="notify_near_floor" {% if notify_near_floor %}checked{% endif %} onchange="this.form.requestSubmit()">
-                </label>
-                <label class="toggle-row">
-                    <span>已達學分上限時提醒</span>
-                    <input type="checkbox" name="notify_at_limit" {% if notify_at_limit %}checked{% endif %} onchange="this.form.requestSubmit()">
-                </label>
+                <input type="hidden" name="action" value="avatar">
+                <div class="avatar-current">
+                    {% if avatar_url %}
+                    <img class="avatar-preview" src="{{ avatar_url }}" alt="{{ user.username }} 的頭貼">
+                    {% else %}
+                    <span class="avatar avatar-fallback" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+                    {% endif %}
+                    <p>沒有上傳時，會使用這個預設頭像。</p>
+                </div>
+                <div class="form-group">
+                    <label for="{{ avatar_form.avatar.id_for_label }}">選擇圖片</label>
+                    {{ avatar_form.avatar }}
+                    {{ avatar_form.avatar.errors }}
+                </div>
+                <p class="credit-note">接受 JPG、JPEG、PNG、WEBP，檔案最大 2MB。</p>
+                <button type="submit" class="btn btn-primary">更新頭貼</button>
             </form>
         </div>
 

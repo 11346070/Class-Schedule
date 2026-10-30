@@ -1,10 +1,24 @@
 """前台登入、註冊與改密碼表單。"""
 
+from django import forms
 from django.contrib.auth.forms import (
     AuthenticationForm,
     PasswordChangeForm,
     UserCreationForm,
 )
+from django.core.exceptions import ValidationError
+
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
+
+def avatar_extension(header: bytes) -> str:
+    if header.startswith(b"\xff\xd8\xff"):
+        return ".jpg"
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if len(header) >= 12 and header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return ".webp"
+    return ""
 
 
 class StyledAuthenticationForm(AuthenticationForm):
@@ -38,3 +52,19 @@ class StyledPasswordChangeForm(PasswordChangeForm):
         for field in self.fields.values():
             field.help_text = ""
             field.widget.attrs["class"] = "form-control"
+
+
+class AvatarUploadForm(forms.Form):
+    avatar = forms.FileField(label="頭貼")
+
+    def clean_avatar(self):
+        uploaded = self.cleaned_data["avatar"]
+        if uploaded.size > MAX_AVATAR_BYTES:
+            raise ValidationError("圖片不能超過 2MB。")
+        header = uploaded.read(16)
+        uploaded.seek(0)
+        extension = avatar_extension(header)
+        if not extension:
+            raise ValidationError("只接受 JPG、JPEG、PNG 或 WEBP。")
+        uploaded.verified_extension = extension
+        return uploaded

@@ -11,7 +11,12 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .data_store import course_store
-from .forms import RegisterForm, StyledAuthenticationForm, StyledPasswordChangeForm
+from .forms import (
+    AvatarUploadForm,
+    RegisterForm,
+    StyledAuthenticationForm,
+    StyledPasswordChangeForm,
+)
 
 
 class StyledLoginView(LoginView):
@@ -199,6 +204,7 @@ def account_settings(request):
     """個人設定：帳號、密碼、學分規則與主修模組。"""
     user_id = get_user_id(request)
     password_form = StyledPasswordChangeForm(request.user)
+    avatar_form = AvatarUploadForm()
 
     if request.method == "POST" and request.POST.get("action") == "password":
         password_form = StyledPasswordChangeForm(request.user, request.POST)
@@ -207,15 +213,17 @@ def account_settings(request):
             update_session_auth_hash(request, user)
             messages.success(request, "密碼已更新")
             return redirect("account_settings")
+    elif request.method == "POST" and request.POST.get("action") == "avatar":
+        avatar_form = AvatarUploadForm(request.POST, request.FILES)
+        if avatar_form.is_valid():
+            course_store.set_avatar(user_id, avatar_form.cleaned_data["avatar"])
+            messages.success(request, "已更新頭貼")
+            return redirect("account_settings")
     elif request.method == "POST" and request.POST.get("action") == "module":
         if course_store.set_student_module(user_id, request.POST.get("module", "")):
             messages.success(request, "已更新主修模組")
         else:
             messages.error(request, "請選擇金融或資訊模組")
-        return redirect("account_settings")
-    elif request.method == "POST" and request.POST.get("action") == "notifications":
-        course_store.set_notification_prefs(user_id, request.POST)
-        messages.success(request, "已更新首頁提醒")
         return redirect("account_settings")
 
     return render(
@@ -223,10 +231,10 @@ def account_settings(request):
         "account_settings.html",
         {
             "password_form": password_form,
+            "avatar_form": avatar_form,
             "credit_limit": course_store.get_user_credit_limit(user_id),
             "credit_floor": course_store.get_user_credit_floor(user_id),
             "module": course_store.get_student_module(user_id),
-            **course_store.get_notification_prefs(user_id),
         },
     )
 

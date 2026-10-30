@@ -134,6 +134,33 @@ body {
     font-weight: 700;
 }
 
+.avatar-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.avatar-current {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.avatar-fallback,
+.avatar-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-fallback { font-size: 28px; }
+
+.avatar-form input[type="file"] { max-width: 100%; }
+
 .account { position: relative; }
 
 .account-btn {

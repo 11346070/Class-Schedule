@@ -13,7 +13,7 @@
             } catch (e) {}
         })();
     </script>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261030d">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261030e">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -37,7 +37,11 @@
             <ul class="nav-menu" id="main-nav">
                 {% if user.is_authenticated %}
                 <li class="mobile-profile">
+                    {% if avatar_url %}
+                    <img class="avatar-img" src="{{ avatar_url }}" alt="">
+                    {% else %}
                     <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+                    {% endif %}
                     <span class="who"><strong>{{ user.username }}</strong><span>已登入</span></span>
                 </li>
                 {% endif %}
@@ -65,7 +69,11 @@
             {% if user.is_authenticated %}
             <div class="account" id="account-menu">
                 <button type="button" class="account-btn" id="account-btn" aria-haspopup="true" aria-expanded="false">
+                    {% if avatar_url %}
+                    <img class="avatar-img" src="{{ avatar_url }}" alt="">
+                    {% else %}
                     <span class="avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+                    {% endif %}
                     <span class="account-name">{{ user.username }}</span>
                 </button>
                 <div class="account-menu">

@@ -479,6 +479,20 @@ class CourseDataStore:
             "notify_at_limit": profile.notify_at_limit,
         }
 
+    def set_avatar(self, user_id: str, uploaded) -> None:
+        """只寫入這個 user_id 的頭貼。呼叫端必須傳入目前登入者。"""
+        from django.core.files.base import ContentFile
+
+        profile, _ = StudentProfile.objects.get_or_create(user_id=user_id)
+        if profile.avatar:
+            profile.avatar.delete(save=False)
+        extension = getattr(uploaded, "verified_extension", ".jpg")
+        profile.avatar.save(
+            f"{user_id}{extension}",
+            ContentFile(uploaded.read()),
+            save=True,
+        )
+
     def set_notification_prefs(self, user_id: str, posted) -> None:
         StudentProfile.objects.update_or_create(
             user_id=user_id,
