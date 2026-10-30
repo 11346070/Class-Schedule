@@ -307,6 +307,7 @@ class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
     list_filter = ("module",)
     list_per_page = 25
     readonly_fields = ("user_id",)
+    fields = ("user_id", "module", "avatar")
 
     @admin.display(description="頭貼", boolean=True)
     def has_avatar(self, obj):
