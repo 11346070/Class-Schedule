@@ -70,12 +70,8 @@
             </tr>
         </table>
 
-        {% if not is_enrolled %}
-            {% if can_enroll %}
-            <div class="alert alert-success detail-inline-alert">✓ {{ enroll_message }}</div>
-            {% else %}
+        {% if not is_enrolled and not can_enroll %}
             <div class="alert alert-danger detail-inline-alert">✗ {{ enroll_message }}</div>
-            {% endif %}
         {% endif %}
 
         <div class="detail-action-buttons">
