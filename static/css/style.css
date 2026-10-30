@@ -2125,13 +2125,25 @@ body {
     .home-stat strong { font-size: 20px; }
 }
 
-.settings-stack {
+.settings-layout {
     display: grid;
-    gap: 16px;
-    max-width: 40rem;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    gap: 20px;
+    align-items: start;
 }
 
-.settings-stack .detail-card { margin: 0; }
+.settings-side {
+    display: grid;
+    gap: 16px;
+}
+
+.settings-layout .detail-card { margin: 0; }
+
+.settings-side .logout-row .btn { width: 100%; }
+
+@media (max-width: 860px) {
+    .settings-layout { grid-template-columns: 1fr; }
+}
 
 .readonly-list { margin: 0; }
 .readonly-list div {

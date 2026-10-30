@@ -8,7 +8,7 @@
     <p class="lead">帳號 {{ user.username }}</p>
 </div>
 
-<div class="settings-stack">
+<div class="settings-layout">
         <div class="detail-card">
             <h2>修改密碼</h2>
             <form method="post" action="{% url 'account_settings' %}" class="settings-form">
@@ -49,6 +49,7 @@
             </form>
         </div>
 
+        <div class="settings-side">
         <div class="detail-card">
             <h2>頭貼</h2>
             <form method="post" action="{% url 'account_settings' %}" enctype="multipart/form-data" class="avatar-form">
@@ -76,5 +77,6 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-outline">登出</button>
         </form>
+        </div>
 </div>
 {% endblock %}
