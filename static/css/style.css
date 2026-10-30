@@ -2279,6 +2279,85 @@ html[data-theme="dark"] .course-actions .btn:disabled:hover {
     color: #8b9bb0;
 }
 
+/* 平板與手機：課程清單改成卡片，避免欄位被壓窄、按鈕被裁切 */
+@media (max-width: 1100px) {
+    .course-table-wrapper:has(.course-list-table) {
+        overflow: visible;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .course-table.course-list-table thead { display: none; }
+
+    .course-table.course-list-table,
+    .course-table.course-list-table tbody,
+    .course-table.course-list-table tr { display: block; }
+
+    .course-table.course-list-table tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--surface);
+        overflow: hidden;
+    }
+
+    .course-table.course-list-table td,
+    .course-table.course-list-table td.col-status,
+    .course-table.course-list-table td.col-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        padding: 8px 14px;
+        border: 0;
+        border-left: 0;
+    }
+
+    .course-table.course-list-table td::before {
+        content: attr(data-label);
+        flex: 0 0 4.5rem;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .course-table.course-list-table td[data-label="課程名稱"],
+    .course-table.course-list-table td[data-label="操作"] {
+        display: block;
+    }
+
+    .course-table.course-list-table td[data-label="課程名稱"]::before,
+    .course-table.course-list-table td[data-label="操作"]::before { content: none; }
+
+    .course-table.course-list-table td[data-label="課程名稱"] {
+        font-size: 1rem;
+        padding-top: 14px;
+    }
+
+    .course-table.course-list-table td[data-label="操作"] {
+        border-top: 1px solid var(--border-color);
+        margin-top: 6px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+
+    .course-table.course-list-table .course-actions {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .course-table.course-list-table .course-status-block {
+        max-width: none;
+        align-items: flex-end;
+        text-align: right;
+    }
+}
+
 /* 手機選單：每個項目使用同一套底色與懸停，避免只有主題按鈕有反應 */
 @media (max-width: 768px) {
     .nav-menu {
