@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.querySelectorAll('.alert').forEach(function (alert) {
+    document.querySelectorAll('.messages-container .alert').forEach(function (alert) {
         const close = alert.querySelector('.alert-close');
         if (close) close.addEventListener('click', function () { dismissAlert(alert); });
         setTimeout(function () { dismissAlert(alert); }, 5000);
@@ -145,7 +145,21 @@ document.addEventListener('DOMContentLoaded', function() {
 function dismissAlert(alert) {
     if (!alert || !alert.isConnected || alert.classList.contains('is-leaving')) return;
     alert.classList.add('is-leaving');
-    setTimeout(function () { alert.remove(); }, 180);
+    const holder = alert.closest('.messages-container');
+    alert.style.boxSizing = 'border-box';
+    alert.style.height = alert.offsetHeight + 'px';
+    alert.style.overflow = 'hidden';
+    alert.offsetHeight;
+    alert.style.transition = 'height 0.18s ease, margin-bottom 0.18s ease, padding 0.18s ease, opacity 0.18s ease';
+    alert.style.height = '0px';
+    alert.style.marginBottom = '0px';
+    alert.style.paddingTop = '0px';
+    alert.style.paddingBottom = '0px';
+    alert.style.opacity = '0';
+    setTimeout(function () {
+        if (alert.parentNode) alert.remove();
+        if (holder && holder.isConnected && !holder.querySelector('.alert')) holder.remove();
+    }, 190);
 }
 
 function openDialog(message) {

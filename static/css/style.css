@@ -308,7 +308,15 @@ body {
     animation: alert-in 0.22s ease;
 }
 
-.alert.is-leaving { animation: alert-out 0.18s ease forwards; }
+.alert.is-leaving { animation: none; }
+
+.messages-container:not(:has(.alert)) {
+    display: none;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
 
 .alert-mark {
     width: 28px;
