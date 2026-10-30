@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -57,6 +58,20 @@ def get_user_id(request):
     if not request.user.is_authenticated:
         return ""
     return str(request.user.pk)
+
+
+def syllabus_links(course):
+    """沒有檔案時回傳 None，頁面就不產生空白連結。"""
+    field = course.syllabus
+    if not field:
+        return None
+    try:
+        if not field.storage.exists(field.name):
+            return None
+    except OSError:
+        return None
+    view_url = reverse("course_syllabus", kwargs={"course_id": course.course_id})
+    return {"view_url": view_url, "download_url": f"{view_url}?download=1"}
 
 
 def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authenticated=True):
@@ -445,9 +460,29 @@ def course_detail(request, course_id):
         'review_summary': summaries.get(course_id),
         'can_review': authenticated and course_store.can_review_course(user_id, course_id),
         'my_review': my_review,
+        'syllabus': syllabus_links(course),
     }
     
     return render(request, 'course_detail.html', context)
+
+
+@require_http_methods(["GET"])
+def course_syllabus(request, course_id):
+    """另開分頁預覽，或加上 download=1 下載。"""
+    course = course_store.get_course(course_id)
+    if course is None or not course.syllabus:
+        raise Http404
+    try:
+        handle = course.syllabus.open("rb")
+    except FileNotFoundError:
+        raise Http404
+    download = request.GET.get("download") == "1"
+    response = FileResponse(handle, content_type="application/pdf")
+    disposition = "attachment" if download else "inline"
+    response["Content-Disposition"] = (
+        f'{disposition}; filename="{course.course_id}-syllabus.pdf"'
+    )
+    return response
 
 
 @login_required

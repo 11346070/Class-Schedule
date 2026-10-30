@@ -79,6 +79,73 @@ class RegisterPageTests(TestCase):
         self.assertNotContains(response, "auth-aside")
 
 
+class CourseDetailTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="detail-student", password="password-1a")
+        course_store.ensure_seeded()
+        self.client.force_login(self.user)
+
+    def test_enrolled_course_hides_the_status_banner_and_shows_module(self):
+        enrolled, _message = course_store.enroll_course(str(self.user.pk), "CS301")
+        self.assertTrue(enrolled)
+        response = self.client.get(reverse("course_detail", args=["CS301"]))
+        self.assertContains(response, "所屬模組")
+        self.assertContains(response, "資訊")
+        self.assertContains(response, "退選此課程")
+        self.assertContains(response, "尚未上傳")
+        self.assertNotContains(response, "您已選修此課程")
+        self.assertNotContains(response, "檢視 PDF")
+
+    def test_syllabus_can_be_viewed_and_downloaded(self):
+        from django.core.files.base import ContentFile
+
+        from timetable.models import Course
+
+        course = Course.objects.get(pk="ART101")
+        course.syllabus.save("ART101.pdf", ContentFile(b"%PDF-1.4 syllabus"), save=True)
+        page = self.client.get(reverse("course_detail", args=["ART101"]))
+        self.assertContains(page, "檢視 PDF")
+        self.assertContains(page, "下載 PDF")
+        self.assertContains(page, 'target="_blank"')
+
+        preview = self.client.get(reverse("course_syllabus", args=["ART101"]))
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(preview["Content-Type"], "application/pdf")
+        self.assertIn("inline", preview["Content-Disposition"])
+
+        download = self.client.get(reverse("course_syllabus", args=["ART101"]) + "?download=1")
+        self.assertIn("attachment", download["Content-Disposition"])
+
+        missing = self.client.get(reverse("course_syllabus", args=["CS101"]))
+        self.assertEqual(missing.status_code, 404)
+
+    def test_admin_rejects_a_non_pdf_syllabus(self):
+        from timetable.admin import CourseAdminForm
+        from timetable.models import Course
+
+        course = Course.objects.get(pk="ART101")
+        form = CourseAdminForm(
+            data={
+                "course_id": course.course_id,
+                "name": course.name,
+                "teacher": course.teacher,
+                "weekday": course.weekday,
+                "start_period": course.start_period,
+                "end_period": course.end_period,
+                "credits": course.credits,
+                "course_type": course.course_type,
+                "module": course.module,
+                "target_class": course.target_class,
+                "total_quota": course.total_quota,
+                "enrolled_count": course.enrolled_count,
+            },
+            files={"syllabus": SimpleUploadedFile("notes.txt", b"not a pdf", content_type="text/plain")},
+            instance=course,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("PDF", form.errors["syllabus"][0])
+
+
 class CourseListHeaderTests(TestCase):
     def test_course_code_and_credit_headers_stay_in_order(self):
         response = self.client.get(reverse("course_list"))

@@ -1062,6 +1062,20 @@ body {
     width: auto;
 }
 
+.detail-inline-alert {
+    margin-top: 1rem;
+}
+
+.detail-card .detail-action-buttons {
+    margin-top: 1rem;
+}
+
+.syllabus-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .detail-table {
     width: 100%;
 }

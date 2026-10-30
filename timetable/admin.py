@@ -6,6 +6,7 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.db.models import Q
 from django.forms import ModelForm
 from django.http import HttpResponseRedirect
@@ -99,8 +100,29 @@ class TimetableUserAdmin(DjangoUserAdmin):
     list_per_page = 25
 
 
+class CourseAdminForm(ModelForm):
+    class Meta:
+        model = Course
+        fields = "__all__"
+
+    def clean_syllabus(self):
+        uploaded = self.cleaned_data.get("syllabus")
+        if not isinstance(uploaded, UploadedFile):
+            return uploaded
+        if not uploaded.name.lower().endswith(".pdf"):
+            raise ValidationError("請上傳 PDF 檔。")
+        header = uploaded.read(5)
+        uploaded.seek(0)
+        if header != b"%PDF-":
+            raise ValidationError("檔案內容不是 PDF。")
+        if uploaded.size > 10 * 1024 * 1024:
+            raise ValidationError("PDF 不能超過 10MB。")
+        return uploaded
+
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
+    form = CourseAdminForm
     list_display = (
         "course_id",
         "name",
@@ -114,11 +136,22 @@ class CourseAdmin(admin.ModelAdmin):
         "enrolled_count",
         "total_quota",
         "target_class",
+        "has_syllabus",
     )
     list_filter = ("course_type", "module", "weekday", "target_class")
     search_fields = ("course_id", "name", "teacher", "target_class")
     ordering = ("course_id",)
     list_per_page = 25
+    fieldsets = (
+        (None, {"fields": ("course_id", "name", "teacher", "course_type", "module", "target_class")}),
+        ("時間與學分", {"fields": ("weekday", "start_period", "end_period", "credits")}),
+        ("名額", {"fields": ("total_quota", "enrolled_count")}),
+        ("課程大綱", {"fields": ("syllabus",)}),
+    )
+
+    @admin.display(description="課程大綱", boolean=True)
+    def has_syllabus(self, obj):
+        return bool(obj.syllabus)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:

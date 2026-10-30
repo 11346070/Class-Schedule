@@ -8,6 +8,11 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
+def syllabus_upload_to(instance, filename):
+    """檔名只用課程編號，避免沿用上傳路徑。"""
+    return f"syllabi/{instance.course_id}.pdf"
+
+
 def avatar_upload_to(instance, filename):
     """只用使用者自己的 ID 當檔名，避免沿用上傳檔名。"""
     suffix = Path(filename).suffix.lower()
@@ -45,6 +50,7 @@ class Course(models.Model):
     credits = models.PositiveSmallIntegerField("學分")
     course_type = models.CharField("課程類型", max_length=20)  # 必修、選修、通識
     module = models.CharField("所屬模組", max_length=20, blank=True, default="")
+    syllabus = models.FileField("課程大綱 PDF", upload_to=syllabus_upload_to, blank=True)
     target_class = models.CharField("開課班級", max_length=50)
     total_quota = models.PositiveIntegerField("總名額")
     enrolled_count = models.PositiveIntegerField("已選人數", default=0)

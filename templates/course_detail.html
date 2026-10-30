@@ -37,6 +37,10 @@
                 <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
             </tr>
             <tr>
+                <th>所屬模組</th>
+                <td>{{ course.module|default:"未設定" }}</td>
+            </tr>
+            <tr>
                 <th>開課班級</th>
                 <td>{{ course.target_class }}</td>
             </tr>
@@ -51,23 +55,27 @@
                     {% endif %}
                 </td>
             </tr>
+            <tr>
+                <th>課程大綱</th>
+                <td>
+                    {% if syllabus %}
+                    <div class="syllabus-links">
+                        <a class="btn btn-secondary btn-sm" href="{{ syllabus.view_url }}" target="_blank" rel="noopener">檢視 PDF</a>
+                        <a class="btn btn-secondary btn-sm" href="{{ syllabus.download_url }}">下載 PDF</a>
+                    </div>
+                    {% else %}
+                    尚未上傳
+                    {% endif %}
+                </td>
+            </tr>
         </table>
-    </div>
 
-    <!-- 選課狀態與操作 -->
-    <div class="detail-actions">
-        {% if is_enrolled %}
-        <div class="alert alert-success">
-            ✓ 您已選修此課程
-        </div>
-        {% elif can_enroll %}
-        <div class="alert alert-success">
-            ✓ {{ enroll_message }}
-        </div>
-        {% else %}
-        <div class="alert alert-danger">
-            ✗ {{ enroll_message }}
-        </div>
+        {% if not is_enrolled %}
+            {% if can_enroll %}
+            <div class="alert alert-success detail-inline-alert">✓ {{ enroll_message }}</div>
+            {% else %}
+            <div class="alert alert-danger detail-inline-alert">✗ {{ enroll_message }}</div>
+            {% endif %}
         {% endif %}
 
         <div class="detail-action-buttons">
