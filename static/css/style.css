@@ -660,6 +660,18 @@ body {
 .course-table.course-list-table th:nth-child(8) { width: 17%; }
 .course-table.course-list-table th:nth-child(9) { width: 20%; }
 
+.course-table.course-list-table thead th:nth-child(1),
+.course-table.course-list-table thead th:nth-child(5) {
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    white-space: nowrap;
+    word-break: keep-all;
+    text-align: left;
+    vertical-align: middle;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+}
+
 .course-table.course-list-table th,
 .course-table.course-list-table td {
     text-align: left;

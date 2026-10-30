@@ -5,6 +5,14 @@ from django.urls import reverse
 from timetable.data_store import course_store
 
 
+class CourseListHeaderTests(TestCase):
+    def test_course_code_and_credit_headers_stay_in_order(self):
+        response = self.client.get(reverse("course_list"))
+        html = response.content.decode()
+        self.assertLess(html.find(">課程編號<"), html.find(">課程名稱<"))
+        self.assertLess(html.find(">學分<"), html.find(">類型<"))
+
+
 class HomepageTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="student", password="password-1a")
