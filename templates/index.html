@@ -69,7 +69,6 @@
 <div class="weekly-schedule">
     <div class="section-head">
         <h2>本週課程表</h2>
-        <p class="lead">第 10 節時間待確認</p>
     </div>
     {% if enrolled_courses %}
     <div class="schedule-table-wrapper">
@@ -92,8 +91,6 @@
                         <span class="period-no">第{{ period_row.period }}節</span>
                         {% if period_row.time %}
                         <span class="period-time">{{ period_row.time }}</span>
-                        {% else %}
-                        <span class="period-time is-pending">待確認</span>
                         {% endif %}
                     </td>
                     {% for cell in period_row.courses %}
