@@ -685,15 +685,14 @@ body {
     table-layout: fixed;
 }
 
-.course-table.course-list-table th:nth-child(1) { width: 8%; }
-.course-table.course-list-table th:nth-child(2) { width: 16%; }
-.course-table.course-list-table th:nth-child(3) { width: 9%; }
-.course-table.course-list-table th:nth-child(4) { width: 11%; }
-.course-table.course-list-table th:nth-child(5) { width: 5%; }
-.course-table.course-list-table th:nth-child(6) { width: 7%; }
-.course-table.course-list-table th:nth-child(7) { width: 7%; }
-.course-table.course-list-table th:nth-child(8) { width: 17%; }
-.course-table.course-list-table th:nth-child(9) { width: 20%; }
+.course-table.course-list-table th:nth-child(1) { width: 10%; }
+.course-table.course-list-table th:nth-child(2) { width: 22%; }
+.course-table.course-list-table th:nth-child(3) { width: 12%; }
+.course-table.course-list-table th:nth-child(4) { width: 14%; }
+.course-table.course-list-table th:nth-child(5) { width: 8%; }
+.course-table.course-list-table th:nth-child(6) { width: 8%; }
+.course-table.course-list-table th:nth-child(7) { width: 8%; }
+.course-table.course-list-table th:nth-child(8) { width: 18%; }
 
 .course-table.course-list-table thead th:nth-child(1),
 .course-table.course-list-table thead th:nth-child(5) {
@@ -712,14 +711,6 @@ body {
     text-align: left;
     white-space: normal;
     vertical-align: middle;
-}
-
-.course-table.course-list-table .col-status {
-    white-space: normal;
-    width: 11rem;
-    min-width: 0;
-    padding-left: 0.85rem;
-    border-left: 1px solid var(--border-color);
 }
 
 .course-table.course-list-table .col-actions {

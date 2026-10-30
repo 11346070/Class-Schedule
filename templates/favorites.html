@@ -12,65 +12,51 @@
 </div>
 
 {% if courses %}
-<!-- 收藏課程列表 -->
-<div class="course-table-wrapper">
-    <table class="course-table course-list-table">
-        <thead>
-            <tr>
-                <th>課程編號</th>
-                <th>課程名稱</th>
-                <th>授課教師</th>
-                <th>時間</th>
-                <th>學分</th>
-                <th>類型</th>
-                <th>名額</th>
-                <th class="col-status">狀態</th>
-                <th class="col-actions">操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for course in courses %}
-            <tr class="{% if course.is_full %}full-row{% elif course.is_enrolled %}enrolled-row{% endif %}">
-                <td data-label="課程編號"><span class="course-id">{{ course.course_id }}</span></td>
-                <td data-label="課程名稱">
-                    <a href="{% url 'course_detail' course.course_id %}">{{ course.name }}</a>
-                </td>
-                <td data-label="授課教師">{{ course.teacher }}</td>
-                <td data-label="時間">{{ course.time_display }}</td>
-                <td data-label="學分">{{ course.credits }}</td>
-                <td data-label="類型">
-                    <span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span>
-                </td>
-                <td data-label="名額" class="{% if course.is_full %}quota-full{% elif course.remaining_quota <= 5 %}quota-low{% endif %}">
-                    {{ course.remaining_quota }} / {{ course.total_quota }}
-                </td>
-                <td class="col-status" data-label="狀態">
-                    <div class="course-status-block">
-                        {% if course.is_enrolled %}
-                            <span class="badge badge-success">已選修</span>
-                        {% elif course.can_enroll %}
-                            <span class="badge badge-success">可選課</span>
-                        {% elif course.is_full %}
-                            <span class="badge badge-danger">已額滿</span>
-                        {% else %}
-                            <span class="badge badge-warning">無法選課</span>
+<div class="course-results">
+    <div class="course-table-wrapper">
+        <table class="course-table course-list-table">
+            <thead>
+                <tr>
+                    <th>課程編號</th>
+                    <th>課程名稱</th>
+                    <th>授課教師</th>
+                    <th>時間</th>
+                    <th>學分</th>
+                    <th>類型</th>
+                    <th>名額</th>
+                    <th class="col-actions">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr class="{% if course.is_enrolled %}enrolled-row{% endif %} {% if course.is_full %}full-row{% endif %}">
+                    <td data-label="課程編號">{{ course.course_id }}</td>
+                    <td data-label="課程名稱">
+                        <strong>{{ course.name }}</strong>
+                        {% if course.review_summary %}
+                        <small class="review-summary">作業{{ course.review_summary.homework }} · 考試{{ course.review_summary.exam }}</small>
                         {% endif %}
-                        {% if not course.is_enrolled and not course.can_enroll %}
-                        <small class="enroll-hint enroll-hint-warn">{{ course.enroll_message }}</small>
-                        {% endif %}
-                    </div>
-                </td>
-                <td class="col-actions" data-label="操作">
-                    <div class="course-actions">
+                    </td>
+                    <td data-label="授課教師">{{ course.teacher }}</td>
+                    <td data-label="時間">{{ course.time_display }}</td>
+                    <td data-label="學分">{{ course.credits }}</td>
+                    <td data-label="類型"><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
+                    <td data-label="名額">
+                        <span class="quota-info {% if course.is_full %}quota-full{% elif course.remaining_quota < 5 %}quota-low{% endif %}">
+                            {{ course.remaining_quota }}/{{ course.total_quota }}
+                        </span>
+                    </td>
+                    <td class="col-actions" data-label="操作">
+                        <div class="course-actions">
                         {% if not course.is_enrolled and course.can_enroll %}
-                        <form method="post" action="{% url 'enroll_course' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="course_id" value="{{ course.course_id }}">
-                            <input type="hidden" name="next" value="favorites">
-                            <button type="submit" class="btn btn-primary btn-sm">選課</button>
-                        </form>
+                            <form method="post" action="{% url 'enroll_course' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="course_id" value="{{ course.course_id }}">
+                                <input type="hidden" name="next" value="favorites">
+                                <button type="submit" class="btn btn-primary btn-sm">選課</button>
+                            </form>
                         {% else %}
-                        <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ course.enroll_message }}">選課</button>
+                            <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ course.enroll_message }}">選課</button>
                         {% endif %}
 
                         <form method="post" action="{% url 'remove_favorite' %}">
@@ -81,24 +67,18 @@
                         </form>
 
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% else %}
-<!-- 空白狀態 -->
 <div class="empty-state">
     <h2>尚未收藏任何課程</h2>
     <p>前往<a href="{% url 'course_list' %}">課程清單</a>收藏喜歡的課程吧！</p>
 </div>
 {% endif %}
-
-<!-- 返回連結 -->
-<!-- <div class="back-link">
-    <a href="{% url 'index' %}" class="btn btn-secondary">← 返回首頁</a>
-    <a href="{% url 'course_list' %}" class="btn btn-primary">瀏覽課程</a>
-</div> -->
 {% endblock %}

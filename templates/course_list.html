@@ -65,7 +65,6 @@
                     <th>學分</th>
                     <th>類型</th>
                     <th>名額</th>
-                    <th class="col-status">狀態</th>
                     <th class="col-actions">操作</th>
                 </tr>
             </thead>
@@ -87,18 +86,6 @@
                         <span class="quota-info {% if course.is_full %}quota-full{% elif course.remaining_quota < 5 %}quota-low{% endif %}">
                             {{ course.remaining_quota }}/{{ course.total_quota }}
                         </span>
-                    </td>
-                    <td class="col-status" data-label="狀態">
-                        <div class="course-status-block">
-                            {% if course.is_enrolled %}
-                            <span class="badge badge-success">已選課</span>
-                            {% elif course.can_enroll %}
-                            <span class="badge badge-success">可選</span>
-                            {% else %}
-                            <span class="badge badge-danger">無法選課</span>
-                            <small class="enroll-hint enroll-hint-warn">{{ course.enroll_message }}</small>
-                            {% endif %}
-                        </div>
                     </td>
                     <td class="col-actions" data-label="操作">
                         <div class="course-actions">

@@ -152,6 +152,22 @@ class CourseListHeaderTests(TestCase):
         html = response.content.decode()
         self.assertLess(html.find(">課程編號<"), html.find(">課程名稱<"))
         self.assertLess(html.find(">學分<"), html.find(">類型<"))
+        self.assertNotIn(">狀態<", html)
+
+    def test_favorites_table_matches_the_course_list_columns(self):
+        user = User.objects.create_user(username="fav-student", password="password-1a")
+        course_store.ensure_seeded()
+        course_store.add_favorite(str(user.pk), "ART101")
+        self.client.force_login(user)
+        response = self.client.get(reverse("favorites"))
+        html = response.content.decode()
+        self.assertIn("course-list-table", html)
+        self.assertLess(html.find(">課程編號<"), html.find(">課程名稱<"))
+        self.assertLess(html.find(">名額<"), html.find(">操作<"))
+        self.assertNotIn(">狀態<", html)
+        self.assertContains(response, "選課")
+        self.assertContains(response, "詳情")
+        self.assertContains(response, "取消收藏")
 
 
 class HomepageTests(TestCase):
