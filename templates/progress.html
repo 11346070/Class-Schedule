@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1>修課進度</h1>
-    <p class="lead">已取得只算已通過。正在修與已過但不認列都不計入。</p>
+    <!-- <p class="lead">已取得只算已通過。正在修與已過但不認列都不計入。</p> -->
 </div>
 
 <div class="detail-card">
@@ -31,20 +31,20 @@
         <div class="credit-line">
             <span>必修</span>
             <strong>{{ summary.required.earned }}<small> / {{ summary.required.need }}</small></strong>
-            <span>還差 {{ summary.required.gap }}</span>
+            <!-- <span>還差 {{ summary.required.gap }}</span> -->
             <span>正在修 {{ summary.required.in_progress }}</span>
         </div>
         <div class="credit-line">
             <span>選修</span>
             <strong>{{ summary.elective.earned }}<small> / {{ summary.elective.need }}</small></strong>
-            <span>還差 {{ summary.elective.gap }}</span>
+            <!-- <span>還差 {{ summary.elective.gap }}</span> -->
             <span>正在修 {{ summary.elective.in_progress }}</span>
         </div>
         <div class="credit-line">
             <span>通識</span>
             <strong>{{ summary.general.earned }}<small> / {{ summary.general.need }}</small></strong>
             <span>還差 {{ summary.general.gap }}</span>
-            <span>正在修 {{ summary.general.in_progress }}</span>
+            <!-- <span>正在修 {{ summary.general.in_progress }}</span> -->
         </div>
     </div>
     <p class="credit-foot">正在修 {{ summary.in_progress_total }}{% if summary.unrecognized_total %} · 不認列 {{ summary.unrecognized_total }}{% endif %}</p>
