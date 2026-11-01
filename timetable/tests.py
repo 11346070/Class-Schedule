@@ -95,9 +95,11 @@ class ModuleCreditLimitTests(TestCase):
             module="金融", defaults={"min_credits": 3, "max_credits": 0}
         )
         self.client.force_login(self.user)
+        course_store.set_student_module(self.user_id, "資訊")
         response = self.client.get(reverse("progress"))
-        self.assertContains(response, "下限 6 · 上限 12")
-        self.assertContains(response, "下限 3 · 上限 不限制")
+        self.assertContains(response, "<span>下限</span><strong>6</strong>")
+        self.assertContains(response, "<span>上限</span><strong>12</strong>")
+        self.assertNotContains(response, "<strong>不限制</strong>")
 
     def test_selected_module_shows_credits_and_warns_below_the_minimum(self):
         from timetable.models import ModuleCreditLimit, StudyRecord
@@ -108,20 +110,21 @@ class ModuleCreditLimitTests(TestCase):
         course_store.set_student_module(self.user_id, "資訊")
         self.client.force_login(self.user)
         empty = self.client.get(reverse("progress"))
-        self.assertContains(empty, "下限 3 · 上限 不限制")
+        self.assertContains(empty, "<span>上限</span><strong>不限制</strong>")
         self.assertContains(empty, "還差 3")
+        self.assertNotContains(empty, ">金融</h3>")
 
         enrolled, _message = course_store.enroll_course(self.user_id, "CS301")
         self.assertTrue(enrolled)
         taking = self.client.get(reverse("progress"))
-        self.assertContains(taking, "正在修 <strong>3</strong>")
+        self.assertContains(taking, "<span>正在修</span><strong>3</strong>")
 
         record = StudyRecord.objects.get(user_id=self.user_id, course_code="CS301")
         record.status = StudyRecord.STATUS_UNRECOGNIZED
         record.save(update_fields=["status"])
         skipped = self.client.get(reverse("progress"))
-        self.assertContains(skipped, "不認列 3")
-        self.assertContains(skipped, "正在修 <strong>0</strong>")
+        self.assertContains(skipped, "不認列 3 學分")
+        self.assertContains(skipped, "<span>正在修</span><strong>0</strong>")
         self.assertContains(skipped, "還差 3")
 
 
@@ -579,7 +582,6 @@ class StudyRecordSyncTests(TestCase):
         self.client.force_login(student)
         progress = self.client.get(reverse("progress"))
         self.assertContains(progress, "已過但不認列")
-        self.assertContains(progress, "不認列 3")
         filtered = self.client.get(reverse("progress"), {"status": "unrecognized"})
         self.assertContains(filtered, "CS102")
         self.assertNotContains(filtered, "CS101")

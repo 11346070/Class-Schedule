@@ -29,25 +29,21 @@
     </div>
     <div class="credit-board">
         <div class="credit-line">
-            <span>必修</span>
-            <strong>{{ summary.required.earned }}<small> / {{ summary.required.need }}</small></strong>
-            <!-- <span>還差 {{ summary.required.gap }}</span> -->
-            <span>正在修 {{ summary.required.in_progress }}</span>
+            <span class="credit-kind">必修</span>
+            <span class="credit-score"><strong>{{ summary.required.earned }}</strong><small> / {{ summary.required.need }}</small></span>
+            <span class="credit-progress">正在修 <strong>{{ summary.required.in_progress }}</strong></span>
         </div>
         <div class="credit-line">
-            <span>選修</span>
-            <strong>{{ summary.elective.earned }}<small> / {{ summary.elective.need }}</small></strong>
-            <!-- <span>還差 {{ summary.elective.gap }}</span> -->
-            <span>正在修 {{ summary.elective.in_progress }}</span>
+            <span class="credit-kind">選修</span>
+            <span class="credit-score"><strong>{{ summary.elective.earned }}</strong><small> / {{ summary.elective.need }}</small></span>
+            <span class="credit-progress">正在修 <strong>{{ summary.elective.in_progress }}</strong></span>
         </div>
         <div class="credit-line">
-            <span>通識</span>
-            <strong>{{ summary.general.earned }}<small> / {{ summary.general.need }}</small></strong>
-            <span>還差 {{ summary.general.gap }}</span>
-            <!-- <span>正在修 {{ summary.general.in_progress }}</span> -->
+            <span class="credit-kind">通識</span>
+            <span class="credit-score"><strong>{{ summary.general.earned }}</strong><small> / {{ summary.general.need }}</small></span>
+            <span class="credit-progress">正在修 <strong>{{ summary.general.in_progress }}</strong></span>
         </div>
     </div>
-    <p class="credit-foot">正在修 {{ summary.in_progress_total }}{% if summary.unrecognized_total %} · 不認列 {{ summary.unrecognized_total }}{% endif %}</p>
 </div>
 
 <div class="detail-card stack-card">
@@ -64,43 +60,36 @@
         </div>
         <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
     </form>
+    {% if module_summary.mine %}
     <div class="module-board">
         {% for row in module_summary.rows %}
-        <article class="module-tile{% if module_summary.mine == row.module %} is-mine{% endif %}">
+        {% if row.module == module_summary.mine %}
+        <article class="module-tile is-mine">
             <header>
                 <h3>{{ row.module }}</h3>
-                {% if module_summary.mine == row.module %}
                 <span class="pill pill-ok">我的模組</span>
-                {% elif module_summary.other == row.module %}
-                <span class="pill">另一模組</span>
-                {% endif %}
             </header>
             <div class="module-metrics">
-                <span>已通過 <strong>{{ row.passed }}</strong></span>
-                <span>正在修 <strong>{{ row.in_progress }}</strong></span>
+                <div class="module-metric"><span>已通過</span><strong>{{ row.passed }}</strong></div>
+                <div class="module-metric"><span>正在修</span><strong>{{ row.in_progress }}</strong></div>
+                <div class="module-metric"><span>下限</span><strong>{{ row.min_label }}</strong></div>
+                <div class="module-metric"><span>上限</span><strong>{{ row.max_label }}</strong></div>
             </div>
-            <p>下限 {{ row.min_label }} · 上限 {{ row.max_label }}</p>
-            {% if module_summary.other == row.module %}
-            <p>可認列 {{ module_summary.recognized }} / {{ module_summary.cap }}</p>
-            {% endif %}
             {% if row.unrecognized %}
-            <p class="credit-note">不認列 {{ row.unrecognized }}</p>
+            <p class="credit-note">不認列 {{ row.unrecognized }} 學分</p>
             {% endif %}
-            {% if module_summary.mine == row.module and row.gap %}
+            {% if row.gap %}
             <p class="credit-note">還差 {{ row.gap }} 學分</p>
             {% endif %}
-            {% if module_summary.mine == row.module and row.over %}
+            {% if row.over %}
             <p class="credit-note">已超過上限</p>
             {% endif %}
         </article>
+        {% endif %}
         {% endfor %}
     </div>
-    {% if module_summary.mine %}
-        {% if module_summary.overflow %}
-        <p class="credit-note">另一模組超出 {{ module_summary.overflow }} 學分，不計入認列。</p>
-        {% endif %}
     {% else %}
-    <p class="credit-foot">選好模組後才計算認列，上限 {{ module_summary.cap }} 學分。</p>
+    <p class="credit-foot">選擇模組後，這裡會顯示該模組的學分。</p>
     {% endif %}
     {% for note in module_limit_notes %}
     <p class="credit-note">{{ note }}</p>
