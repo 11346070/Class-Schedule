@@ -99,6 +99,31 @@ class ModuleCreditLimitTests(TestCase):
         self.assertContains(response, "資訊模組學分下限 6，上限 12")
         self.assertContains(response, "金融模組學分下限 3，上限 不限制")
 
+    def test_selected_module_shows_credits_and_warns_below_the_minimum(self):
+        from timetable.models import ModuleCreditLimit, StudyRecord
+
+        ModuleCreditLimit.objects.update_or_create(
+            module="資訊", defaults={"min_credits": 3, "max_credits": 0}
+        )
+        course_store.set_student_module(self.user_id, "資訊")
+        self.client.force_login(self.user)
+        empty = self.client.get(reverse("progress"))
+        self.assertContains(empty, "資訊模組：已通過 0 學分，本學期正在修 0 學分。")
+        self.assertContains(empty, "還沒達到下限 3，還差 3")
+
+        enrolled, _message = course_store.enroll_course(self.user_id, "CS301")
+        self.assertTrue(enrolled)
+        taking = self.client.get(reverse("progress"))
+        self.assertContains(taking, "資訊模組：已通過 0 學分，本學期正在修 3 學分。")
+
+        record = StudyRecord.objects.get(user_id=self.user_id, course_code="CS301")
+        record.status = StudyRecord.STATUS_UNRECOGNIZED
+        record.save(update_fields=["status"])
+        skipped = self.client.get(reverse("progress"))
+        self.assertContains(skipped, "另有 3 學分已過但不認列")
+        self.assertContains(skipped, "已通過 0 學分，本學期正在修 0 學分。")
+        self.assertContains(skipped, "還差 3")
+
 
 class RegisterPageTests(TestCase):
     def test_register_uses_the_same_card_as_login(self):

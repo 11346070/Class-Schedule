@@ -54,8 +54,18 @@
     </form>
     <div class="progress-lines">
         <p>認列上限：{{ module_summary.cap }} 學分</p>
-        {% for limit in module_limits %}
-        <p>{{ limit.module }}模組學分下限 {{ limit.min_label }}，上限 {{ limit.max_label }}。</p>
+        {% for row in module_summary.rows %}
+        <p>{{ row.module }}模組：已通過 {{ row.passed }} 學分，本學期正在修 {{ row.in_progress }} 學分。{% if module_summary.mine == row.module %}（我的模組）{% elif module_summary.other == row.module %}（另一模組）{% endif %}</p>
+        <p>{{ row.module }}模組學分下限 {{ row.min_label }}，上限 {{ row.max_label }}。</p>
+        {% if row.unrecognized %}
+        <p class="credit-note">{{ row.module }}模組另有 {{ row.unrecognized }} 學分已過但不認列，不計入下限與畢業學分。</p>
+        {% endif %}
+        {% if module_summary.mine == row.module and row.gap %}
+        <p class="credit-note">{{ row.module }}模組已通過 {{ row.passed }} 學分，還沒達到下限 {{ row.min_label }}，還差 {{ row.gap }}。正在修的學分要等結算後才計入。</p>
+        {% endif %}
+        {% if module_summary.mine == row.module and row.over %}
+        <p class="credit-note">{{ row.module }}模組已通過 {{ row.passed }} 學分，已超過上限 {{ row.max_label }}。</p>
+        {% endif %}
         {% endfor %}
         {% if module_summary.mine %}
         <p>另一模組（{{ module_summary.other }}）已通過 {{ module_summary.other_passed }} 學分，可相互認列 {{ module_summary.recognized }} 學分。</p>

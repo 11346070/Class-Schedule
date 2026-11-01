@@ -224,18 +224,6 @@ class CourseDataStore:
         )
         return rule
 
-    def get_module_limit_rows(self) -> List[dict]:
-        """前台顯示管理員設定的模組學分上下限。0 代表這一端不限制。"""
-        rows = []
-        for module in (MODULE_INFO, MODULE_FINANCE):
-            rule = self.get_module_credit_limit(module)
-            rows.append({
-                "module": module,
-                "min_label": str(rule.min_credits) if rule.min_credits else "不限制",
-                "max_label": str(rule.max_credits) if rule.max_credits else "不限制",
-            })
-        return rows
-
     def module_credits(self, user_id: str, module: str) -> int:
         return sum(
             Enrollment.objects.filter(
@@ -657,7 +645,51 @@ class CourseDataStore:
             "other_passed": other_passed,
             "recognized": min(other_passed, cap),
             "overflow": max(other_passed - cap, 0),
+            "rows": self._module_credit_rows(user_id),
         }
+
+    def _module_credit_rows(self, user_id: str) -> List[dict]:
+        """每個模組的已通過、正在修，以及距離下限還差多少。已過但不認列不計入。"""
+        buckets = {
+            module: {"passed": 0, "unrecognized": 0, "in_progress": 0, "settled": set()}
+            for module in (MODULE_INFO, MODULE_FINANCE)
+        }
+        records = StudyRecord.objects.filter(user_id=user_id).select_related("course")
+        for record in records:
+            record_module = record.module
+            if not record_module and record.course_id:
+                record_module = record.course.module
+            bucket = buckets.get(record_module)
+            if bucket is None:
+                continue
+            if record.status == StudyRecord.STATUS_PASSED:
+                bucket["passed"] += record.credits
+                bucket["settled"].add(record.course_code)
+            elif record.status == StudyRecord.STATUS_UNRECOGNIZED:
+                bucket["unrecognized"] += record.credits
+                bucket["settled"].add(record.course_code)
+        for course in self.get_user_enrollments(user_id):
+            bucket = buckets.get(course.module)
+            if bucket is None or course.course_id in bucket["settled"]:
+                continue
+            bucket["in_progress"] += course.credits
+        rows = []
+        for module in (MODULE_INFO, MODULE_FINANCE):
+            bucket = buckets[module]
+            rule = self.get_module_credit_limit(module)
+            gap = max(rule.min_credits - bucket["passed"], 0) if rule.min_credits else 0
+            over = max(bucket["passed"] - rule.max_credits, 0) if rule.max_credits else 0
+            rows.append({
+                "module": module,
+                "passed": bucket["passed"],
+                "in_progress": bucket["in_progress"],
+                "unrecognized": bucket["unrecognized"],
+                "min_label": str(rule.min_credits) if rule.min_credits else "不限制",
+                "max_label": str(rule.max_credits) if rule.max_credits else "不限制",
+                "gap": gap,
+                "over": over,
+            })
+        return rows
 
     def get_study_history(self, user_id: str) -> List[dict]:
         """歷年紀錄加上本學期選課（顯示為正在修）。"""
