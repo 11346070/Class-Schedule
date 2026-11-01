@@ -31,7 +31,7 @@
             <strong>{{ enrolled_count }}</strong>
         </div>
         <div class="home-stat">
-            <span>還可再選</span>
+            <span>上限內還可</span>
             <strong>{{ remaining_credits }}<small> 學分</small></strong>
         </div>
         <div class="home-stat">
@@ -62,15 +62,16 @@
         <span style="left: {{ floor_percent }}%;">退選下限 {{ credit_floor }}</span>
         <span>上限 {{ credit_limit }}</span>
     </div>
-    {% if total_credits > credit_limit %}
-    <p class="credit-note">目前學分已超過上限。新的選課仍會被上限擋住，如需調整請聯絡管理員。</p>
+    {% if uncounted_credits %}
+    <p class="credit-note">已選 {{ total_credits }} 學分，超過上限 {{ uncounted_credits }} 學分。超出的學分不一定都能認列，請自行確認。</p>
     {% endif %}
     {% if enrolled_count and total_credits <= credit_floor %}
     <p class="credit-note">已達最低學分，無法再自行退選。如需退選，請聯絡管理員。</p>
     {% elif enrolled_count and total_credits <= credit_floor|add:3 %}
     <p class="credit-note">接近最低學分。退到下限以下時，只能請管理員協助退選。</p>
-    {% elif total_credits == credit_limit %}
-    <p class="credit-note">已達學分上限，無法再選會超過上限的課。</p>
+    {% endif %}
+    {% if total_credits == credit_limit %}
+    <p class="credit-note">已達學分上限。再選仍可加選，超出的學分不一定能認列，請自行確認。</p>
     {% endif %}
     {% for note in module_limit_notes %}
     <p class="credit-note">{{ note }}</p>

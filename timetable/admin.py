@@ -336,7 +336,7 @@ class StudyRecordAdmin(UserIdentityMixin, admin.ModelAdmin):
     list_per_page = 25
     list_select_related = ("course",)
     readonly_fields = ("created_at",)
-    actions = ("mark_passed", "mark_failed", "mark_in_progress")
+    actions = ("mark_passed", "mark_unrecognized", "mark_failed", "mark_in_progress")
 
     def get_queryset(self, request):
         course_store.sync_enrollment_study_records()
@@ -362,6 +362,9 @@ class StudyRecordAdmin(UserIdentityMixin, admin.ModelAdmin):
     def mark_passed(self, request, queryset):
         self._set_status(request, queryset, StudyRecord.STATUS_PASSED, "已通過")
 
+    def mark_unrecognized(self, request, queryset):
+        self._set_status(request, queryset, StudyRecord.STATUS_UNRECOGNIZED, "已過但不認列")
+
     def mark_failed(self, request, queryset):
         self._set_status(request, queryset, StudyRecord.STATUS_FAILED, "未通過")
 
@@ -369,6 +372,7 @@ class StudyRecordAdmin(UserIdentityMixin, admin.ModelAdmin):
         self._set_status(request, queryset, StudyRecord.STATUS_IN_PROGRESS, "正在修")
 
     mark_passed.short_description = "標為已通過"
+    mark_unrecognized.short_description = "標為已過但不認列"
     mark_failed.short_description = "標為未通過"
     mark_in_progress.short_description = "標為正在修"
 

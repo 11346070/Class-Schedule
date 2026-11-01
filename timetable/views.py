@@ -181,6 +181,7 @@ def index(request):
     total_credits = course_store.get_user_total_credits(user_id)
     credit_limit = course_store.get_user_credit_limit(user_id)
     credit_floor = course_store.get_user_credit_floor(user_id)
+    uncounted_credits = max(total_credits - credit_limit, 0)
     
     # 建立每週課表（簡化版，直接給模板使用）
     weekly_schedule = []
@@ -212,6 +213,7 @@ def index(request):
     context = {
         'enrolled_courses': enrolled_courses,
         'total_credits': total_credits,
+        'uncounted_credits': uncounted_credits,
         'credit_limit': credit_limit,
         'credit_floor': credit_floor,
         'remaining_credits': max(credit_limit - total_credits, 0),

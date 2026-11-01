@@ -34,6 +34,37 @@ class ModuleCreditLimitTests(TestCase):
         self.assertFalse(allowed)
         self.assertIn("資訊模組學分上限", message)
 
+    def test_credits_over_the_personal_limit_can_still_be_enrolled(self):
+        from timetable.models import UserCreditLimit
+
+        UserCreditLimit.objects.update_or_create(
+            user_id=self.user_id,
+            defaults={"credit_floor": 0, "credit_limit": 3},
+        )
+        first, _message = course_store.enroll_course(self.user_id, "CS101")
+        self.assertTrue(first)
+        self.assertEqual(course_store.get_user_total_credits(self.user_id), 3)
+
+        self.client.force_login(self.user)
+        at_limit = self.client.get(reverse("index"))
+        self.assertContains(at_limit, "超出的學分不一定能認列，請自行確認。")
+
+        second, message = course_store.enroll_course(self.user_id, "CS102")
+        self.assertTrue(second, message)
+        self.assertIn("不一定能認列", message)
+        self.assertEqual(course_store.get_user_total_credits(self.user_id), 6)
+
+        allowed, preview = course_store.check_enrollment_eligibility(self.user_id, "CS103")
+        self.assertTrue(allowed)
+        self.assertIn("不一定都能認列", preview)
+
+        home = self.client.get(reverse("index"))
+        self.assertContains(home, "超過上限 3 學分。超出的學分不一定都能認列，請自行確認。")
+        self.assertNotContains(home, "被上限擋住")
+        listing = self.client.get(reverse("course_list"), {"keyword": "CS103"})
+        self.assertContains(listing, "選課")
+        self.assertNotContains(listing, "disabled title=\"超過學分上限")
+
     def test_module_minimum_blocks_drop_but_admin_force_still_works(self):
         from timetable.models import ModuleCreditLimit, UserCreditLimit
 
@@ -486,3 +517,44 @@ class StudyRecordSyncTests(TestCase):
         self.assertTrue(dropped)
         kept.refresh_from_db()
         self.assertEqual(kept.status, StudyRecord.STATUS_PASSED)
+
+    def test_unrecognized_pass_is_not_counted_as_earned(self):
+        from timetable.models import StudyRecord
+
+        student = User.objects.create_user(username="skip-credit", password="Old-password-1")
+        staff = User.objects.create_superuser("skip-boss", "skip@example.com", "Old-password-1")
+        course_store.ensure_seeded()
+        user_id = str(student.pk)
+        course_store.enroll_course(user_id, "CS101")
+        record = StudyRecord.objects.get(user_id=user_id, course_code="CS101")
+        record.status = StudyRecord.STATUS_PASSED
+        record.save(update_fields=["status"])
+        course_store.enroll_course(user_id, "CS102")
+        extra = StudyRecord.objects.get(user_id=user_id, course_code="CS102")
+
+        self.client.force_login(staff)
+        marked = self.client.post(
+            "/admin/timetable/studyrecord/",
+            {
+                "action": "mark_unrecognized",
+                "index": "0",
+                "_selected_action": [str(extra.pk)],
+            },
+            follow=True,
+        )
+        self.assertEqual(marked.status_code, 200)
+        extra.refresh_from_db()
+        self.assertEqual(extra.status, StudyRecord.STATUS_UNRECOGNIZED)
+
+        summary = course_store.get_graduation_summary(user_id)
+        self.assertEqual(summary["required"]["earned"], 3)
+        self.assertEqual(summary["unrecognized_total"], 3)
+        self.assertEqual(summary["in_progress_total"], 0)
+
+        self.client.force_login(student)
+        progress = self.client.get(reverse("progress"))
+        self.assertContains(progress, "已過但不認列")
+        self.assertContains(progress, "已過但不認列合計 3 學分，不計入已取得。")
+        filtered = self.client.get(reverse("progress"), {"status": "unrecognized"})
+        self.assertContains(filtered, "CS102")
+        self.assertNotContains(filtered, "CS101")

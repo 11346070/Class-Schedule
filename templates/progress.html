@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1>修課進度</h1>
-    <p class="lead">已取得只計算歷年已通過的學分，本學期正在修的課要等結算後才會計入。</p>
+    <p class="lead">已取得只計算歷年「已通過」。標成「已過但不認列」的學分不計入。本學期正在修的課要等結算後才會計入。</p>
 </div>
 
 <div class="detail-card">
@@ -32,6 +32,9 @@
         <p>選修：已取得 {{ summary.elective.earned }}／門檻 {{ summary.elective.need }}，還差 {{ summary.elective.gap }} 學分（本學期正在修 {{ summary.elective.in_progress }}）</p>
         <p>通識：已取得 {{ summary.general.earned }}／門檻 {{ summary.general.need }}，還差 {{ summary.general.gap }} 學分（本學期正在修 {{ summary.general.in_progress }}）</p>
         <p>本學期正在修合計 {{ summary.in_progress_total }} 學分，尚未計入已取得。</p>
+        {% if summary.unrecognized_total %}
+        <p>已過但不認列合計 {{ summary.unrecognized_total }} 學分，不計入已取得。</p>
+        {% endif %}
     </div>
 </div>
 
@@ -70,7 +73,7 @@
 
 <div class="detail-card stack-card">
     <h2>歷年修課紀錄</h2>
-    <p class="lead">已通過、未通過，以及本學期正在修的課。歷年成績由管理員登錄。</p>
+    <p class="lead">已通過、已過但不認列、未通過，以及本學期正在修的課。歷年成績由管理員登錄。</p>
     <form method="get" action="{% url 'progress' %}" class="search-form history-filter">
         <div class="form-row">
             <div class="form-group">
@@ -87,6 +90,7 @@
                 <select id="status" name="status" class="form-control">
                     <option value="">全部</option>
                     <option value="passed" {% if status_filter == "passed" %}selected{% endif %}>已通過</option>
+                    <option value="unrecognized" {% if status_filter == "unrecognized" %}selected{% endif %}>已過但不認列</option>
                     <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>未通過</option>
                     <option value="in_progress" {% if status_filter == "in_progress" %}selected{% endif %}>正在修</option>
                 </select>

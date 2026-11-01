@@ -318,12 +318,6 @@ class CourseDataStore:
                     False,
                     f"時間衝突：與「{existing.name}」（{existing.get_time_display()}）衝堂",
                 )
-        if total_credits + course.credits > credit_limit:
-            return (
-                False,
-                f"超過學分上限：目前 {total_credits} 學分，選課後將達 "
-                f"{total_credits + course.credits} 學分，上限為 {credit_limit} 學分",
-            )
         rule = rules.get(course.module)
         if rule is not None and rule.max_credits:
             current = module_totals.get(course.module, 0)
@@ -334,7 +328,15 @@ class CourseDataStore:
                     f"超過{course.module}模組學分上限：目前 {current} 學分，"
                     f"選課後將達 {after} 學分，上限為 {rule.max_credits} 學分。",
                 )
-        return True, f"可以選課！選課後將有 {total_credits + course.credits} 學分"
+        after = total_credits + course.credits
+        if after > credit_limit:
+            extra = after - credit_limit
+            return (
+                True,
+                f"可以選課！選課後共 {after} 學分，超過上限 {extra} 學分。"
+                "超出的學分不一定都能認列，請自行確認。",
+            )
+        return True, f"可以選課！選課後將有 {after} 學分"
 
     def check_enrollment_eligibility(
         self, user_id: str, course_id: str
@@ -370,11 +372,7 @@ class CourseDataStore:
 
                 current_credits = self.get_user_total_credits(user_id)
                 credit_limit = self.get_user_credit_limit(user_id)
-                if current_credits + course.credits > credit_limit:
-                    return (
-                        False,
-                        f"超過學分上限：目前 {current_credits} 學分，上限為 {credit_limit} 學分",
-                    )
+                over_limit = current_credits + course.credits > credit_limit
 
                 module_message = self._module_limit_message(user_id, course, adding=True)
                 if module_message:
@@ -388,7 +386,10 @@ class CourseDataStore:
                 course.save(update_fields=["enrolled_count"])
                 self.ensure_enrollment_study_record(user_id, course)
 
-                return True, f"選課成功！剩餘名額：{course.remaining_quota}"
+                message = f"選課成功！剩餘名額：{course.remaining_quota}"
+                if over_limit:
+                    message += "。已超過學分上限，超出的學分不一定能認列，請自行確認"
+                return True, message
 
     def drop_course(
         self, user_id: str, course_id: str, force: bool = False
@@ -484,7 +485,7 @@ class CourseDataStore:
             StudyRecord.objects.bulk_create(missing)
 
     def remove_current_study_record(self, user_id: str, course_id: str) -> None:
-        """退選只拿掉還在修的那一筆，已通過或未通過的成績留著。"""
+        """退選只拿掉還在修的那一筆。已通過、未通過、已過但不認列都留著。"""
         StudyRecord.objects.filter(
             user_id=user_id,
             course_code=course_id,
@@ -525,13 +526,19 @@ class CourseDataStore:
         return rule
 
     def get_graduation_summary(self, user_id: str) -> dict:
-        """已取得只算歷年「已通過」；本學期選課另計為正在修。"""
+        """已取得只算歷年「已通過」。已過但不認列不計入。本學期選課另計為正在修。"""
         rule = self.get_graduation_requirement()
         passed = {"必修": 0, "選修": 0, "通識": 0}
         passed_codes = set()
-        for record in StudyRecord.objects.filter(
-            user_id=user_id, status=StudyRecord.STATUS_PASSED
-        ):
+        unrecognized_total = 0
+        for record in StudyRecord.objects.filter(user_id=user_id):
+            if record.status == StudyRecord.STATUS_UNRECOGNIZED:
+                unrecognized_total += record.credits
+                if record.course_code:
+                    passed_codes.add(record.course_code)
+                continue
+            if record.status != StudyRecord.STATUS_PASSED:
+                continue
             if record.course_type in passed:
                 passed[record.course_type] += record.credits
             if record.course_code:
@@ -572,6 +579,7 @@ class CourseDataStore:
                 "in_progress": in_progress["通識"],
             },
             "in_progress_total": sum(in_progress.values()),
+            "unrecognized_total": unrecognized_total,
         }
 
     def get_student_module(self, user_id: str) -> str:
@@ -668,7 +676,11 @@ class CourseDataStore:
         recorded = {
             row["course_code"]
             for row in rows
-            if row["status"] in (StudyRecord.STATUS_PASSED, StudyRecord.STATUS_IN_PROGRESS)
+            if row["status"] in (
+                StudyRecord.STATUS_PASSED,
+                StudyRecord.STATUS_UNRECOGNIZED,
+                StudyRecord.STATUS_IN_PROGRESS,
+            )
         }
         for course in self.get_user_enrollments(user_id):
             if course.course_id in recorded:

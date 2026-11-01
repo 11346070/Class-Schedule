@@ -188,12 +188,14 @@ class GraduationRequirement(models.Model):
 
 
 class StudyRecord(models.Model):
-    """歷年修課紀錄。已通過的學分才計入畢業「已取得」。"""
+    """歷年修課紀錄。已通過才計入畢業；已過但不認列的學分不算。"""
     STATUS_PASSED = "passed"
     STATUS_FAILED = "failed"
     STATUS_IN_PROGRESS = "in_progress"
+    STATUS_UNRECOGNIZED = "unrecognized"
     STATUS_CHOICES = [
         (STATUS_PASSED, "已通過"),
+        (STATUS_UNRECOGNIZED, "已過但不認列"),
         (STATUS_FAILED, "未通過"),
         (STATUS_IN_PROGRESS, "正在修"),
     ]
