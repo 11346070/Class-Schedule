@@ -271,6 +271,11 @@ class ModuleCreditLimitAdmin(admin.ModelAdmin):
     ordering = ("module",)
     list_per_page = 25
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["module"].help_text = "輸入新名稱就會新增這個模組，學生選單會跟著出現。"
+        return form
+
 
 @admin.register(CourseReview)
 class CourseReviewAdmin(UserIdentityMixin, admin.ModelAdmin):

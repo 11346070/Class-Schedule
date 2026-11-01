@@ -286,8 +286,6 @@ class ModuleCreditLimit(models.Model):
 
     def clean(self):
         super().clean()
-        if self.module not in (MODULE_INFO, MODULE_FINANCE):
-            raise ValidationError({"module": "目前只使用資訊與金融模組。"})
         if self.max_credits and self.min_credits > self.max_credits:
             raise ValidationError({"max_credits": "最高學分不可低於最低學分。"})
 

@@ -282,7 +282,7 @@ def account_settings(request):
         if course_store.set_student_module(user_id, request.POST.get("module", "")):
             messages.success(request, "已更新主修模組")
         else:
-            messages.error(request, "請選擇金融或資訊模組")
+            messages.error(request, "請選擇已建立的模組")
         return redirect("account_settings")
 
     return render(
@@ -307,7 +307,7 @@ def progress(request):
         if course_store.set_student_module(user_id, request.POST.get("module", "")):
             messages.success(request, "已更新主修模組")
         else:
-            messages.error(request, "請選擇金融或資訊模組")
+            messages.error(request, "請選擇已建立的模組")
         return redirect("progress")
 
     summary = course_store.get_graduation_summary(user_id)

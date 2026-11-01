@@ -127,6 +127,55 @@ class ModuleCreditLimitTests(TestCase):
         self.assertContains(skipped, "<span>正在修</span><strong>0</strong>")
         self.assertContains(skipped, "還差 3")
 
+    def test_a_module_created_in_admin_can_be_chosen_and_limited(self):
+        from timetable.models import Course, ModuleCreditLimit
+
+        limit = ModuleCreditLimit(module="設計", min_credits=2, max_credits=4)
+        limit.full_clean()
+        limit.save()
+        Course.objects.create(
+            course_id="DS101",
+            name="設計概論",
+            teacher="設教授",
+            weekday=5,
+            start_period=6,
+            end_period=8,
+            credits=3,
+            course_type="選修",
+            module="設計",
+            target_class="全校",
+            total_quota=30,
+        )
+        Course.objects.create(
+            course_id="DS102",
+            name="設計進階",
+            teacher="設教授",
+            weekday=3,
+            start_period=6,
+            end_period=8,
+            credits=3,
+            course_type="選修",
+            module="設計",
+            target_class="全校",
+            total_quota=30,
+        )
+
+        self.assertTrue(course_store.set_student_module(self.user_id, "設計"))
+        self.assertFalse(course_store.set_student_module(self.user_id, "不存在"))
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("progress"))
+        self.assertContains(page, '<option value="設計" selected>設計</option>')
+        self.assertContains(page, "<span>下限</span><strong>2</strong>")
+        self.assertContains(page, "<span>上限</span><strong>4</strong>")
+        self.assertContains(page, ">設計</h3>")
+        self.assertNotContains(page, ">資訊</h3>")
+
+        enrolled, message = course_store.enroll_course(self.user_id, "DS101")
+        self.assertTrue(enrolled, message)
+        blocked, message = course_store.enroll_course(self.user_id, "DS102")
+        self.assertFalse(blocked)
+        self.assertIn("設計模組學分上限", message)
+
 
 class RegisterPageTests(TestCase):
     def test_register_uses_the_same_card_as_login(self):

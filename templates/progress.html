@@ -54,8 +54,9 @@
             <label for="module">我的模組</label>
             <select id="module" name="module" class="form-control">
                 <option value="">請選擇</option>
-                <option value="資訊" {% if module_summary.mine == "資訊" %}selected{% endif %}>資訊</option>
-                <option value="金融" {% if module_summary.mine == "金融" %}selected{% endif %}>金融</option>
+                {% for name in module_summary.modules %}
+                <option value="{{ name }}" {% if module_summary.mine == name %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
             </select>
         </div>
         <button type="submit" class="btn btn-primary" data-no-disable>儲存模組</button>
@@ -70,10 +71,14 @@
                 <span class="pill pill-ok">我的模組</span>
             </header>
             <div class="module-metrics">
-                <div class="module-metric"><span>已通過</span><strong>{{ row.passed }}</strong></div>
-                <div class="module-metric"><span>正在修</span><strong>{{ row.in_progress }}</strong></div>
-                <div class="module-metric"><span>下限</span><strong>{{ row.min_label }}</strong></div>
-                <div class="module-metric"><span>上限</span><strong>{{ row.max_label }}</strong></div>
+                <div class="module-pair">
+                    <div class="module-metric"><span>已通過</span><strong>{{ row.passed }}</strong></div>
+                    <div class="module-metric"><span>正在修</span><strong>{{ row.in_progress }}</strong></div>
+                </div>
+                <div class="module-pair">
+                    <div class="module-metric"><span>下限</span><strong>{{ row.min_label }}</strong></div>
+                    <div class="module-metric"><span>上限</span><strong>{{ row.max_label }}</strong></div>
+                </div>
             </div>
             {% if row.unrecognized %}
             <p class="credit-note">不認列 {{ row.unrecognized }} 學分</p>

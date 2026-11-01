@@ -502,8 +502,9 @@ body {
 
 /* === 統計列 === */
 .stats-bar {
-    display: flex;
-    gap: 2rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem 2.5rem;
     margin-top: 1rem;
 }
 
@@ -609,43 +610,52 @@ body {
 }
 
 .credit-line {
-    display: grid;
-    grid-template-columns: 6rem minmax(8rem, 1fr) 9rem;
-    align-items: center;
-    column-gap: 2.5rem;
-    padding: 1rem 1.35rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 2.5rem;
+    padding: 1.15rem 1.75rem;
     border-radius: 0.75rem;
     background: var(--light-bg);
 }
 
 .credit-kind {
+    flex: 0 0 4.5rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    font-size: 1.05rem;
+    letter-spacing: 0.08em;
 }
 
 .credit-score {
-    font-size: 1.35rem;
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: 1.45rem;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 0.03em;
 }
 
 .credit-score small {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--text-secondary);
 }
 
 .credit-progress {
-    justify-self: end;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.85rem;
+    min-width: 8rem;
     color: var(--text-secondary);
     font-size: 0.95rem;
     white-space: nowrap;
 }
 
 .credit-progress strong {
-    margin-left: 0.35rem;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     color: var(--text-primary);
 }
 
@@ -681,21 +691,30 @@ body {
 
 .module-metrics {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem 1.75rem;
-    margin-top: 1.15rem;
+    gap: 1.35rem;
+    margin-top: 1.35rem;
+}
+
+.module-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+}
+
+.module-metric {
+    display: flex;
+    align-items: baseline;
+    gap: 1.1rem;
 }
 
 .module-metric span {
-    display: block;
-    margin-bottom: 0.35rem;
+    min-width: 4.25rem;
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 1rem;
 }
 
 .module-metric strong {
-    display: block;
-    font-size: 1.55rem;
+    font-size: 1.7rem;
     line-height: 1.2;
     color: var(--text-primary);
 }
@@ -706,18 +725,17 @@ body {
 
 @media (max-width: 768px) {
     .credit-line {
-        grid-template-columns: 1fr;
-        row-gap: 0.45rem;
-        column-gap: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.65rem;
     }
 
     .credit-progress {
-        justify-self: start;
+        justify-content: flex-start;
     }
 
-    .module-metrics {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem 1.25rem;
+    .module-pair {
+        gap: 1.25rem;
     }
 }
 
@@ -1514,7 +1532,7 @@ body {
     
     /* 統計列 */
     .stats-bar {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: 1rem;
     }
     

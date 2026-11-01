@@ -217,6 +217,15 @@ class CourseDataStore:
         )
         return True
 
+    def module_rules(self) -> List[ModuleCreditLimit]:
+        """後台新增的模組都會列在這裡。資訊、金融若還沒有，會先補上。"""
+        for name in (MODULE_INFO, MODULE_FINANCE):
+            ModuleCreditLimit.objects.get_or_create(
+                module=name,
+                defaults={"min_credits": 0, "max_credits": 0},
+            )
+        return list(ModuleCreditLimit.objects.order_by("module"))
+
     def get_module_credit_limit(self, module: str) -> ModuleCreditLimit:
         rule, _ = ModuleCreditLimit.objects.get_or_create(
             module=module,
@@ -232,9 +241,11 @@ class CourseDataStore:
         )
 
     def _module_limit_message(self, user_id: str, course: Course, adding: bool) -> Optional[str]:
-        if course.module not in (MODULE_INFO, MODULE_FINANCE):
+        if not course.module:
             return None
-        rule = self.get_module_credit_limit(course.module)
+        rule = ModuleCreditLimit.objects.filter(pk=course.module).first()
+        if rule is None:
+            return None
         current = self.module_credits(user_id, course.module)
         after = current + course.credits if adding else current - course.credits
         if adding and rule.max_credits and after > rule.max_credits:
@@ -252,8 +263,8 @@ class CourseDataStore:
     def get_module_limit_notes(self, user_id: str) -> List[str]:
         """已選課程超出管理員後來調整的上下限時，只提示，不退選。"""
         notes = []
-        for module in (MODULE_INFO, MODULE_FINANCE):
-            rule = self.get_module_credit_limit(module)
+        for rule in self.module_rules():
+            module = rule.module
             current = self.module_credits(user_id, module)
             if rule.max_credits and current > rule.max_credits:
                 notes.append(
@@ -272,10 +283,7 @@ class CourseDataStore:
         enrolled = self.get_user_enrollments(user_id) if user_id else []
         total_credits = sum(course.credits for course in enrolled)
         credit_limit = self.get_user_credit_limit(user_id)
-        rules = {
-            module: self.get_module_credit_limit(module)
-            for module in (MODULE_INFO, MODULE_FINANCE)
-        }
+        rules = {rule.module: rule for rule in self.module_rules()}
         module_totals = {
             module: self.module_credits(user_id, module) for module in rules
         } if user_id else {module: 0 for module in rules}
@@ -575,7 +583,8 @@ class CourseDataStore:
         return profile.module
 
     def set_student_module(self, user_id: str, module: str) -> bool:
-        if module not in (MODULE_INFO, MODULE_FINANCE):
+        module = (module or "").strip()
+        if not ModuleCreditLimit.objects.filter(pk=module).exists():
             return False
         StudentProfile.objects.update_or_create(
             user_id=user_id, defaults={"module": module}
@@ -619,6 +628,9 @@ class CourseDataStore:
         self._ensure_module_courses()
         rule = self.get_graduation_requirement()
         mine = self.get_student_module(user_id)
+        names = [item.module for item in self.module_rules()]
+        if mine not in names:
+            mine = ""
         other = ""
         if mine == MODULE_INFO:
             other = MODULE_FINANCE
@@ -646,13 +658,14 @@ class CourseDataStore:
             "recognized": min(other_passed, cap),
             "overflow": max(other_passed - cap, 0),
             "rows": self._module_credit_rows(user_id),
+            "modules": names,
         }
 
     def _module_credit_rows(self, user_id: str) -> List[dict]:
         """每個模組的已通過、正在修，以及距離下限還差多少。已過但不認列不計入。"""
         buckets = {
-            module: {"passed": 0, "unrecognized": 0, "in_progress": 0, "settled": set()}
-            for module in (MODULE_INFO, MODULE_FINANCE)
+            rule.module: {"passed": 0, "unrecognized": 0, "in_progress": 0, "settled": set()}
+            for rule in self.module_rules()
         }
         records = StudyRecord.objects.filter(user_id=user_id).select_related("course")
         for record in records:
@@ -674,13 +687,12 @@ class CourseDataStore:
                 continue
             bucket["in_progress"] += course.credits
         rows = []
-        for module in (MODULE_INFO, MODULE_FINANCE):
-            bucket = buckets[module]
-            rule = self.get_module_credit_limit(module)
+        for rule in self.module_rules():
+            bucket = buckets[rule.module]
             gap = max(rule.min_credits - bucket["passed"], 0) if rule.min_credits else 0
             over = max(bucket["passed"] - rule.max_credits, 0) if rule.max_credits else 0
             rows.append({
-                "module": module,
+                "module": rule.module,
                 "passed": bucket["passed"],
                 "in_progress": bucket["in_progress"],
                 "unrecognized": bucket["unrecognized"],
