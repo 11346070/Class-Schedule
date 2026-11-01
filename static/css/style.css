@@ -724,18 +724,95 @@ body {
 }
 
 @media (max-width: 768px) {
+    .stats-bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .stat-item {
+        min-width: 0;
+    }
+
     .credit-line {
-        flex-direction: column;
-        align-items: flex-start;
         gap: 0.65rem;
+        padding: 0.85rem 0.9rem;
+    }
+
+    .credit-kind {
+        flex-basis: auto;
+        font-size: 0.95rem;
+        letter-spacing: 0;
+    }
+
+    .credit-score {
+        gap: 0.4rem;
+        font-size: 1.15rem;
+    }
+
+    .credit-score small {
+        font-size: 0.9rem;
     }
 
     .credit-progress {
-        justify-content: flex-start;
+        min-width: 0;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+    }
+
+    .credit-progress strong {
+        font-size: 1.15rem;
+    }
+
+    .module-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .module-form .form-group {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .module-form .btn {
+        width: 100%;
+        height: auto;
+    }
+
+    .module-tile {
+        padding: 1rem 0.9rem 1.05rem;
+        overflow: hidden;
+    }
+
+    .module-metrics {
+        gap: 1rem;
     }
 
     .module-pair {
-        gap: 1.25rem;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.85rem 0.75rem;
+    }
+
+    .module-metric {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+        min-width: 0;
+    }
+
+    .module-metric span {
+        min-width: 0;
+        font-size: 0.85rem;
+    }
+
+    .module-metric strong {
+        font-size: 1.35rem;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .history-filter .form-row {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1532,8 +1609,7 @@ body {
     
     /* 統計列 */
     .stats-bar {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
     }
     
     /* 搜尋表單 */
@@ -1623,6 +1699,41 @@ body {
 
     .course-table.course-list-table .course-actions {
         flex-wrap: wrap;
+    }
+
+    .course-table.history-table thead { display: none; }
+    .course-table.history-table,
+    .course-table.history-table tbody,
+    .course-table.history-table tr { display: block; }
+    .course-table.history-table tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--surface);
+        overflow: hidden;
+    }
+    .course-table.history-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        width: auto;
+        border: 0;
+        text-align: right;
+    }
+    .course-table.history-table td::before {
+        content: attr(data-label);
+        flex: 0 0 4.5rem;
+        color: var(--text-secondary);
+        font-size: 12px;
+        text-align: left;
+    }
+    .course-table.history-table td[data-label="課程名稱"] { display: block; text-align: left; }
+    .course-table.history-table td[data-label="課程名稱"]::before { content: none; }
+    .course-table.history-table td[data-label="課程名稱"] { font-size: 1rem; padding-top: 12px; font-weight: 700; }
+    .course-table-wrapper:has(.history-table) {
+        overflow: visible;
+        max-width: 100%;
     }
     
     .course-table th,

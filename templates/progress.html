@@ -134,7 +134,7 @@
     <p class="results-count">共 <strong>{{ history_total }}</strong> 筆</p>
     {% if history_total %}
     <div class="course-table-wrapper">
-        <table class="course-table">
+        <table class="course-table history-table">
             <thead>
                 <tr>
                     <th>學期</th>
@@ -148,18 +148,18 @@
             <tbody>
                 {% for row in history_page %}
                 <tr>
-                    <td>{{ row.semester }}</td>
-                    <td>{{ row.course_code }}</td>
-                    <td>
+                    <td data-label="學期">{{ row.semester }}</td>
+                    <td data-label="課程編號">{{ row.course_code }}</td>
+                    <td data-label="課程名稱">
                         {% if row.detail_id %}
                         <a href="{% url 'course_detail' row.detail_id %}">{{ row.course_name }}</a>
                         {% else %}
                         {{ row.course_name }}
                         {% endif %}
                     </td>
-                    <td>{{ row.credits }}</td>
-                    <td><span class="course-type-badge badge-{{ row.course_type }}">{{ row.course_type }}</span></td>
-                    <td>{{ row.status_label }}</td>
+                    <td data-label="學分">{{ row.credits }}</td>
+                    <td data-label="類型"><span class="course-type-badge badge-{{ row.course_type }}">{{ row.course_type }}</span></td>
+                    <td data-label="狀態">{{ row.status_label }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
