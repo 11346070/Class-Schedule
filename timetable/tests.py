@@ -173,6 +173,31 @@ class CourseListHeaderTests(TestCase):
         self.assertContains(response, "詳情")
         self.assertContains(response, "取消收藏")
 
+    def test_blocked_enroll_button_shows_the_reason_on_hover(self):
+        user = User.objects.create_user(username="blocked-student", password="password-1a")
+        course_store.ensure_seeded()
+        enrolled, _message = course_store.enroll_course(str(user.pk), "GE101")
+        self.assertTrue(enrolled)
+        self.client.force_login(user)
+        response = self.client.get(reverse("course_list"), {"keyword": "CS101"})
+        self.assertContains(
+            response,
+            'disabled title="時間衝突：與「中國文學欣賞」（週一 第2-3節）衝堂"',
+        )
+
+    def test_enrolled_favorite_shows_a_drop_button(self):
+        user = User.objects.create_user(username="fav-enrolled", password="password-1a")
+        course_store.ensure_seeded()
+        user_id = str(user.pk)
+        enrolled, _message = course_store.enroll_course(user_id, "ART102")
+        self.assertTrue(enrolled)
+        course_store.add_favorite(user_id, "ART102")
+        self.client.force_login(user)
+        response = self.client.get(reverse("favorites"))
+        self.assertContains(response, "退選")
+        self.assertContains(response, reverse("drop_course"))
+        self.assertNotContains(response, 'title="已選修"')
+
 
 class HomepageTests(TestCase):
     def setUp(self):

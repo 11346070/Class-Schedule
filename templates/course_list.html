@@ -105,7 +105,7 @@
                                 <button type="submit" class="btn btn-primary btn-sm">選課</button>
                             </form>
                         {% else %}
-                            <button type="button" class="btn btn-secondary btn-sm" disabled>選課</button>
+                            <button type="button" class="btn btn-secondary btn-sm" disabled title="{{ course.enroll_message }}">選課</button>
                         {% endif %}
 
                         {% if course.is_favorited %}
