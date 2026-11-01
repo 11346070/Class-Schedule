@@ -603,6 +603,107 @@ body {
     margin: 0;
 }
 
+.credit-board {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.credit-line {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(5rem, 1fr) auto auto;
+    gap: 0.75rem 1rem;
+    align-items: baseline;
+    padding: 0.7rem 0.9rem;
+    border-radius: 0.65rem;
+    background: var(--light-bg);
+}
+
+.credit-line strong {
+    font-size: 1.15rem;
+    color: var(--text-primary);
+}
+
+.credit-line small,
+.credit-line span:last-child,
+.credit-foot {
+    color: var(--text-secondary);
+}
+
+.credit-foot {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+}
+
+.module-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.module-tile {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    background: var(--light-bg);
+}
+
+.module-tile.is-mine {
+    border-color: var(--primary-color);
+}
+
+.module-tile header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.module-tile h3 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.module-tile .pill:not(.pill-ok) {
+    background: var(--surface);
+    color: var(--text-secondary);
+}
+
+.module-metrics {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0.75rem 0 0.35rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.module-metrics strong {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 1.35rem;
+    color: var(--text-primary);
+}
+
+.module-tile p:not(.credit-note) {
+    margin: 0.15rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.module-tile .credit-note,
+.module-board + .credit-note {
+    margin-top: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .credit-line {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .module-board {
+        grid-template-columns: 1fr;
+    }
+}
+
 .credit-note {
     margin-top: 1rem;
     padding: 0.75rem 1rem;
