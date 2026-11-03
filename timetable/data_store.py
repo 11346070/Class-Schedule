@@ -578,6 +578,38 @@ class CourseDataStore:
             "unrecognized_total": unrecognized_total,
         }
 
+    def class_names(self, extra: str = "") -> List[str]:
+        """學生可選的班級。來自課程開課班級，不含全校。"""
+        self.ensure_seeded()
+        names = list(
+            Course.objects.exclude(target_class__in=["", "全校"])
+            .order_by("target_class")
+            .values_list("target_class", flat=True)
+            .distinct()
+        )
+        extra = (extra or "").strip()
+        if extra and extra not in names and extra != "全校":
+            names.append(extra)
+        return names
+
+    def is_profile_complete(self, user) -> bool:
+        profile = StudentProfile.objects.filter(pk=str(user.pk)).first()
+        name = (user.get_full_name() or "").strip()
+        return bool(profile and profile.student_number and profile.class_name and name)
+
+    def save_student_identity(
+        self, user, name: str, student_number: str, class_name: str
+    ) -> None:
+        """寫入姓名、學號與班級。學號一旦有值就不再從這裡改。"""
+        user.first_name = name
+        user.last_name = ""
+        user.save(update_fields=["first_name", "last_name"])
+        profile, _ = StudentProfile.objects.get_or_create(user_id=str(user.pk))
+        if not profile.student_number:
+            profile.student_number = student_number
+        profile.class_name = class_name
+        profile.save(update_fields=["student_number", "class_name"])
+
     def get_student_module(self, user_id: str) -> str:
         profile, _ = StudentProfile.objects.get_or_create(user_id=user_id)
         return profile.module

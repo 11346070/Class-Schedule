@@ -250,8 +250,12 @@ class CourseReview(models.Model):
 
 
 class StudentProfile(models.Model):
-    """學生選擇的主修模組。另一模組學分最多認列到上限。"""
+    """學生的學號、班級與主修模組。另一模組學分最多認列到上限。"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)
+    student_number = models.CharField(
+        "學號", max_length=12, blank=True, null=True, unique=True
+    )
+    class_name = models.CharField("班級", max_length=50, blank=True, default="")
     module = models.CharField("主修模組", max_length=20, blank=True, default="")
     notify_at_floor = models.BooleanField("已達退選下限時提醒", default=True)
     notify_near_floor = models.BooleanField("接近退選下限時提醒", default=True)
@@ -259,11 +263,16 @@ class StudentProfile(models.Model):
     avatar = models.FileField("頭貼", upload_to=avatar_upload_to, blank=True)
 
     class Meta:
-        verbose_name = "學生模組"
-        verbose_name_plural = "學生模組"
+        verbose_name = "學生資料"
+        verbose_name_plural = "學生資料"
 
     def __str__(self):
-        return f"{self.user_id}: {self.module or '未選'}"
+        return f"{self.student_number or self.user_id}: {self.class_name or '未填班級'}"
+
+    def save(self, *args, **kwargs):
+        number = (self.student_number or "").strip().upper()
+        self.student_number = number or None
+        super().save(*args, **kwargs)
 
 
 class ModuleCreditLimit(models.Model):

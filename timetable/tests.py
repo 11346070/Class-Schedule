@@ -178,6 +178,16 @@ class ModuleCreditLimitTests(TestCase):
 
 
 class RegisterPageTests(TestCase):
+    def test_register_sends_the_new_user_to_settings(self):
+        response = self.client.post(reverse("register"), {
+            "username": "new-student",
+            "password1": "password-1a",
+            "password2": "password-1a",
+        })
+        self.assertRedirects(response, reverse("account_settings"))
+        page = self.client.get(reverse("account_settings"))
+        self.assertContains(page, "請填寫姓名、學號與班級")
+
     def test_register_uses_the_same_card_as_login(self):
         response = self.client.get(reverse("register"))
         self.assertContains(response, "auth-solo-card")
@@ -430,6 +440,66 @@ class AccountSettingsTests(TestCase):
         too_big = self.client.post(reverse("account_settings"), {"action": "avatar", "avatar": oversized})
         self.assertContains(too_big, "2MB")
 
+    def test_student_can_save_identity_once_and_keeps_the_student_number(self):
+        course_store.ensure_seeded()
+        home = self.client.get(reverse("index"))
+        self.assertContains(home, "請填寫姓名、學號與班級")
+        settings_page = self.client.get(reverse("account_settings"))
+        self.assertContains(settings_page, "請填寫姓名、學號與班級")
+        self.assertContains(settings_page, "資工一")
+
+        invalid = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林同學",
+            "student_number": "ab12",
+            "class_name": "資工一",
+        })
+        self.assertContains(invalid, "學號須為 5 到 12 碼英數")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "")
+
+        saved = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林同學",
+            "student_number": "a12345",
+            "class_name": "資工一",
+        }, follow=True)
+        self.assertContains(saved, "已更新個人資料")
+        self.assertNotContains(saved, "請填寫姓名、學號與班級")
+        self.assertContains(saved, "學號如需更正，請聯絡管理員")
+        self.user.refresh_from_db()
+        profile = StudentProfile.objects.get(pk=str(self.user.pk))
+        self.assertEqual(self.user.first_name, "林同學")
+        self.assertEqual(self.user.last_name, "")
+        self.assertEqual(profile.student_number, "A12345")
+        self.assertEqual(profile.class_name, "資工一")
+
+        changed = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林小同學",
+            "student_number": "B99999",
+            "class_name": "資工二",
+        }, follow=True)
+        self.assertContains(changed, "已更新個人資料")
+        self.user.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(self.user.first_name, "林小同學")
+        self.assertEqual(profile.student_number, "A12345")
+        self.assertEqual(profile.class_name, "資工二")
+        done = self.client.get(reverse("index"))
+        self.assertNotContains(done, "請填寫姓名、學號與班級")
+
+    def test_student_number_must_be_unique(self):
+        StudentProfile.objects.create(user_id=str(self.other.pk), student_number="A12345")
+        response = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林同學",
+            "student_number": "a12345",
+            "class_name": "資工一",
+        })
+        self.assertContains(response, "這個學號已經有人使用")
+        self.assertFalse(StudentProfile.objects.filter(user_id=str(self.user.pk), student_number="A12345").exists())
+
     def test_homepage_reminder_follows_the_system_rule(self):
         course_store.ensure_seeded()
         StudentProfile.objects.update_or_create(
@@ -523,6 +593,51 @@ class AdminIdentityTests(TestCase):
         self.assertContains(home, "/admin/timetable/coursereview/")
         reviews = self.client.get("/admin/timetable/coursereview/")
         self.assertEqual(reviews.status_code, 200)
+
+    def test_admin_can_correct_a_student_number_and_rejects_duplicates(self):
+        student = User.objects.create_user(username="id-student", password="Old-password-1")
+        other = User.objects.create_user(username="other-student", password="Old-password-1")
+        StudentProfile.objects.create(user_id=str(student.pk), student_number="A12345", class_name="資工一")
+        StudentProfile.objects.create(user_id=str(other.pk), student_number="B12345")
+        staff = User.objects.create_superuser("id-boss", "id-boss@example.com", "Old-password-1")
+        course_store.ensure_seeded()
+        self.client.force_login(staff)
+
+        listing = self.client.get("/admin/timetable/studentprofile/")
+        self.assertContains(listing, "A12345")
+        self.assertContains(listing, "資工一")
+        found = self.client.get("/admin/timetable/studentprofile/?q=A12345")
+        self.assertContains(found, "id-student")
+
+        duplicate = self.client.post(
+            f"/admin/timetable/studentprofile/{student.pk}/change/",
+            {
+                "name": "王小明",
+                "student_number": "b12345",
+                "class_name": "資工二",
+                "module": "",
+            },
+        )
+        self.assertContains(duplicate, "這個學號已經由帳號 other-student 使用")
+        student.refresh_from_db()
+        self.assertEqual(student.first_name, "")
+
+        updated = self.client.post(
+            f"/admin/timetable/studentprofile/{student.pk}/change/",
+            {
+                "name": "王小明",
+                "student_number": "C12345",
+                "class_name": "資工二",
+                "module": "",
+            },
+            follow=True,
+        )
+        self.assertEqual(updated.status_code, 200)
+        student.refresh_from_db()
+        profile = StudentProfile.objects.get(pk=str(student.pk))
+        self.assertEqual(student.first_name, "王小明")
+        self.assertEqual(profile.student_number, "C12345")
+        self.assertEqual(profile.class_name, "資工二")
 
 
 class StudyRecordSyncTests(TestCase):

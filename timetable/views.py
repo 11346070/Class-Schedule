@@ -17,9 +17,11 @@ from .data_store import course_store
 from .forms import (
     AvatarUploadForm,
     RegisterForm,
+    StudentIdentityForm,
     StyledAuthenticationForm,
     StyledPasswordChangeForm,
 )
+from .models import StudentProfile
 
 
 def page_items(page):
@@ -71,7 +73,7 @@ def register(request):
             user = form.save()
             login(request, user)
             messages.success(request, "註冊成功，已為你登入")
-            return redirect("index")
+            return redirect("account_settings")
     else:
         form = RegisterForm()
 
@@ -228,6 +230,7 @@ def index(request):
         ],
         'periods': range(1, 14),
         'module_limit_notes': course_store.get_module_limit_notes(user_id),
+        'profile_incomplete': not course_store.is_profile_complete(request.user),
         'export_payload': {
             'username': request.user.username,
             'display_name': request.user.get_full_name() or request.user.username,
@@ -260,12 +263,33 @@ def index(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def account_settings(request):
-    """個人設定：修改密碼與頭貼。主修模組改在修課進度設定。"""
+    """個人設定：個人資料、修改密碼與頭貼。主修模組改在修課進度設定。"""
     user_id = get_user_id(request)
+    profile, _created = StudentProfile.objects.get_or_create(user_id=user_id)
+    class_names = course_store.class_names(extra=profile.class_name)
+    identity_form = StudentIdentityForm(
+        user=request.user, profile=profile, class_names=class_names
+    )
     password_form = StyledPasswordChangeForm(request.user)
     avatar_form = AvatarUploadForm()
 
-    if request.method == "POST" and request.POST.get("action") == "password":
+    if request.method == "POST" and request.POST.get("action") == "profile":
+        identity_form = StudentIdentityForm(
+            request.POST,
+            user=request.user,
+            profile=profile,
+            class_names=class_names,
+        )
+        if identity_form.is_valid():
+            course_store.save_student_identity(
+                request.user,
+                identity_form.cleaned_data["name"],
+                identity_form.cleaned_data["student_number"],
+                identity_form.cleaned_data["class_name"],
+            )
+            messages.success(request, "已更新個人資料")
+            return redirect("account_settings")
+    elif request.method == "POST" and request.POST.get("action") == "password":
         password_form = StyledPasswordChangeForm(request.user, request.POST)
         if password_form.is_valid():
             user = password_form.save()
@@ -289,6 +313,8 @@ def account_settings(request):
         request,
         "account_settings.html",
         {
+            "identity_form": identity_form,
+            "profile_complete": course_store.is_profile_complete(request.user),
             "password_form": password_form,
             "avatar_form": avatar_form,
             "credit_limit": course_store.get_user_credit_limit(user_id),

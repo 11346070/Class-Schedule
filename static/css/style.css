@@ -550,6 +550,29 @@ body {
     margin-bottom: 1rem;
 }
 
+.settings-form .errorlist {
+    list-style: none;
+    margin-top: 0.35rem;
+    color: var(--danger-color);
+    font-size: 0.875rem;
+}
+
+.settings-form .field-hint {
+    margin: 0.35rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.form-control:disabled {
+    background: var(--light-bg);
+    color: var(--text-secondary);
+}
+
+.credit-note a {
+    color: inherit;
+    font-weight: 700;
+}
+
 .settings-form .btn {
     margin-top: 0.25rem;
 }
@@ -2444,6 +2467,7 @@ body {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
     grid-template-areas:
+        "profile profile"
         "password avatar"
         "logout .";
     gap: 20px;
@@ -2452,6 +2476,7 @@ body {
     min-width: 0;
 }
 
+.settings-panel-profile { grid-area: profile; }
 .settings-panel-password { grid-area: password; }
 .settings-panel-avatar { grid-area: avatar; }
 
@@ -2508,6 +2533,7 @@ body {
     .settings-layout {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
+            "profile"
             "password"
             "avatar"
             "logout";

@@ -12,6 +12,7 @@ from django.forms import ModelForm
 from django.http import HttpResponseRedirect
 
 from .data_store import course_store
+from .forms import StudentProfileAdminForm
 from .models import (
     Course,
     CourseReview,
@@ -300,19 +301,30 @@ class CourseReviewAdmin(UserIdentityMixin, admin.ModelAdmin):
 
 @admin.register(StudentProfile)
 class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
+    form = StudentProfileAdminForm
     list_display = (
         "user_id",
         "account_name",
         "account_full_name",
         "account_email",
+        "student_number_display",
+        "class_name_display",
         "module",
         "has_avatar",
     )
-    search_fields = ("user_id", "module")
-    list_filter = ("module",)
+    search_fields = ("user_id", "module", "student_number", "class_name")
+    list_filter = ("class_name", "module")
     list_per_page = 25
     readonly_fields = ("user_id",)
-    fields = ("user_id", "module", "avatar")
+    fields = ("user_id", "name", "student_number", "class_name", "module", "avatar")
+
+    @admin.display(description="學號", ordering="student_number")
+    def student_number_display(self, obj):
+        return obj.student_number or "—"
+
+    @admin.display(description="班級", ordering="class_name")
+    def class_name_display(self, obj):
+        return obj.class_name or "—"
 
     @admin.display(description="頭貼", boolean=True)
     def has_avatar(self, obj):

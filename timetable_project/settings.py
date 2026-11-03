@@ -157,7 +157,7 @@ SIMPLEUI_CONFIG = {
                     'url': '/admin/timetable/coursereview/',
                 },
                 {
-                    'name': '學生模組',
+                    'name': '學生資料',
                     'icon': 'fas fa-layer-group',
                     'url': '/admin/timetable/studentprofile/',
                 },

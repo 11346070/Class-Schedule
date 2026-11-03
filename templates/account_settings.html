@@ -9,6 +9,41 @@
 </div>
 
 <div class="settings-layout">
+        <div class="detail-card settings-panel settings-panel-profile">
+            <h2>個人資料</h2>
+            {% if not profile_complete %}
+            <p class="credit-note">請填寫姓名、學號與班級。</p>
+            {% endif %}
+            <form method="post" action="{% url 'account_settings' %}" class="settings-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="profile">
+                {{ identity_form.non_field_errors }}
+                <div class="form-group">
+                    <label for="account-username">帳號</label>
+                    <input id="account-username" class="form-control" value="{{ user.username }}" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="{{ identity_form.name.id_for_label }}">姓名</label>
+                    {{ identity_form.name }}
+                    {{ identity_form.name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ identity_form.student_number.id_for_label }}">學號</label>
+                    {{ identity_form.student_number }}
+                    {% if identity_form.student_number.help_text %}
+                    <p class="field-hint">{{ identity_form.student_number.help_text }}</p>
+                    {% endif %}
+                    {{ identity_form.student_number.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ identity_form.class_name.id_for_label }}">班級</label>
+                    {{ identity_form.class_name }}
+                    {{ identity_form.class_name.errors }}
+                </div>
+                <button type="submit" class="btn btn-primary">儲存個人資料</button>
+            </form>
+        </div>
+
         <div class="detail-card settings-panel settings-panel-password">
             <h2>修改密碼</h2>
             <form method="post" action="{% url 'account_settings' %}" class="settings-form">

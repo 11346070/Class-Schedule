@@ -20,6 +20,10 @@
     </div>
 </div>
 
+{% if profile_incomplete %}
+<p class="credit-note">請填寫姓名、學號與班級。<a href="{% url 'account_settings' %}">前往個人設定</a></p>
+{% endif %}
+
 <section class="home-summary" aria-label="本學期學分">
     <div class="home-stats">
         <div class="home-stat">
