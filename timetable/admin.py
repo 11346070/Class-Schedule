@@ -113,6 +113,13 @@ class TimetableUserAdmin(DjangoUserAdmin):
 
 
 class CourseAdminForm(forms.ModelForm):
+    new_class = forms.CharField(
+        label="新增班級",
+        max_length=50,
+        required=False,
+        help_text="下拉選單沒有這個班級時，直接輸入名稱。儲存這門課後就會建立，學生的班級選單也會出現。",
+    )
+
     class Meta:
         model = Course
         fields = "__all__"
@@ -134,8 +141,9 @@ class CourseAdminForm(forms.ModelForm):
         if current and current not in {value for value, _label in class_names}:
             class_names.append((current, current))
         self.fields["target_class"].widget = forms.Select(choices=class_names)
+        self.fields["target_class"].required = False
         self.fields["target_class"].help_text = (
-            "選項來自「班級」，也可以選全校。新班級請先到「班級」新增。"
+            "從清單選擇，或在下面的「新增班級」直接輸入。全校代表每個已填班級的學生都會遇到這門必修。"
         )
 
     def clean_module(self):
@@ -147,10 +155,26 @@ class CourseAdminForm(forms.ModelForm):
 
     def clean_target_class(self):
         value = (self.cleaned_data.get("target_class") or "").strip()
+        if (self.data.get("new_class") or "").strip():
+            return value
         allowed = {choice for choice, _label in self.fields["target_class"].widget.choices if choice}
         if value not in allowed:
-            raise ValidationError("請選擇已建立的班級，或全校。")
+            raise ValidationError("請選擇已建立的班級，或在新增班級填名稱。")
         return value
+
+    def clean(self):
+        cleaned = super().clean()
+        new_name = (cleaned.get("new_class") or "").strip()
+        if not new_name:
+            if not (cleaned.get("target_class") or "").strip():
+                self.add_error("target_class", "請選擇已建立的班級，或在新增班級填名稱。")
+            return cleaned
+        if new_name == "全校":
+            self.add_error("new_class", "「全校」不用另外建立，直接在開課班級選擇全校。")
+            return cleaned
+        SchoolClass.objects.get_or_create(name=new_name)
+        cleaned["target_class"] = new_name
+        return cleaned
 
     def clean_syllabus(self):
         uploaded = self.cleaned_data.get("syllabus")
@@ -190,7 +214,7 @@ class CourseAdmin(admin.ModelAdmin):
     ordering = ("course_id",)
     list_per_page = 25
     fieldsets = (
-        (None, {"fields": ("course_id", "name", "teacher", "course_type", "module", "target_class")}),
+        (None, {"fields": ("course_id", "name", "teacher", "course_type", "module", "target_class", "new_class")}),
         ("時間與學分", {"fields": ("weekday", "start_period", "end_period", "credits")}),
         ("名額", {"fields": ("total_quota", "enrolled_count")}),
         ("課程大綱", {"fields": ("syllabus",)}),

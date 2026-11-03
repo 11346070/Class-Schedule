@@ -774,6 +774,47 @@ class AdminIdentityTests(TestCase):
         settings_page = self.client.get(reverse("account_settings"))
         self.assertContains(settings_page, "資工四")
 
+    def test_course_form_can_create_a_class(self):
+        from timetable.models import Course, SchoolClass
+
+        course_store.ensure_seeded()
+        staff = User.objects.create_superuser("new-class-boss", "new-class@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        form = self.client.get("/admin/timetable/course/add/")
+        self.assertContains(form, "新增班級")
+        created = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS401",
+            "name": "新班級課程",
+            "teacher": "新教授",
+            "course_type": "選修",
+            "module": "",
+            "target_class": "",
+            "new_class": "資工四",
+            "weekday": "1",
+            "start_period": "1",
+            "end_period": "2",
+            "credits": "2",
+            "total_quota": "20",
+        })
+        self.assertEqual(created.status_code, 302)
+        self.assertTrue(SchoolClass.objects.filter(name="資工四").exists())
+        self.assertEqual(Course.objects.get(pk="CS401").target_class, "資工四")
+        rejected = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS402",
+            "name": "不該用全校當新班級",
+            "teacher": "新教授",
+            "course_type": "選修",
+            "module": "",
+            "target_class": "",
+            "new_class": "全校",
+            "weekday": "1",
+            "start_period": "1",
+            "end_period": "2",
+            "credits": "2",
+            "total_quota": "20",
+        })
+        self.assertContains(rejected, "不用另外建立")
+
     def test_new_required_course_drops_a_conflicting_elective(self):
         course_store.ensure_seeded()
         student = User.objects.create_user(username="clash-student", password="Old-password-1")
