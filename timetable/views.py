@@ -109,10 +109,12 @@ def courses_with_enroll_status(user_id, courses, enrolled_course_ids, authentica
         if authenticated and course.course_id not in enrolled_course_ids
     ]
     decisions = course_store.eligibility_for_courses(user_id, pending) if pending else {}
+    locked_ids = course_store.locked_required_ids(user_id) if authenticated else set()
     courses_with_status = []
     for course in courses:
         course_dict = course.to_dict()
         course_dict["is_enrolled"] = course.course_id in enrolled_course_ids
+        course_dict["required_locked"] = course.course_id in locked_ids
         if not authenticated:
             course_dict["can_enroll"] = False
             course_dict["enroll_message"] = "請先登入"
@@ -281,13 +283,16 @@ def account_settings(request):
             class_names=class_names,
         )
         if identity_form.is_valid():
-            course_store.save_student_identity(
+            added = course_store.save_student_identity(
                 request.user,
                 identity_form.cleaned_data["name"],
                 identity_form.cleaned_data["student_number"],
                 identity_form.cleaned_data["class_name"],
             )
-            messages.success(request, "已更新個人資料")
+            if added:
+                messages.success(request, "已更新個人資料，必修課程已加入課表。")
+            else:
+                messages.success(request, "已更新個人資料")
             return redirect("account_settings")
     elif request.method == "POST" and request.POST.get("action") == "password":
         password_form = StyledPasswordChangeForm(request.user, request.POST)
@@ -513,6 +518,7 @@ def course_detail(request, course_id):
     context = {
         'course': course_dict,
         'is_enrolled': is_enrolled,
+        'required_locked': authenticated and course_store.is_required_locked(user_id, course),
         'is_favorited': is_favorited,
         'conflict_course': conflict_course.to_dict() if conflict_course else None,
         'can_enroll': can_enroll,

@@ -178,16 +178,88 @@ class CourseDataStore:
 
     def get_user_enrollments(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
-        return list(
+        if user_id:
+            self.assign_required_courses(user_id)
+        courses = list(
             Course.objects.filter(enrollments__user_id=user_id).order_by(
                 "weekday", "start_period"
             )
         )
+        locked = self.locked_required_ids(user_id) if user_id else set()
+        for course in courses:
+            course.required_locked = course.course_id in locked
+        return courses
 
     def is_user_enrolled(self, user_id: str, course_id: str) -> bool:
+        if user_id:
+            self.assign_required_courses(user_id)
         return Enrollment.objects.filter(
             user_id=user_id, course_id=course_id
         ).exists()
+
+    def _required_courses(self, class_name: str) -> List[Course]:
+        if not class_name:
+            return []
+        self.ensure_seeded()
+        return list(
+            Course.objects.filter(
+                course_type="必修",
+                target_class__in=[class_name, "全校"],
+            )
+        )
+
+    def locked_required_ids(self, user_id: str) -> set:
+        class_name = self.student_class_name(user_id)
+        if not class_name:
+            return set()
+        return set(
+            Course.objects.filter(
+                course_type="必修",
+                target_class__in=[class_name, "全校"],
+            ).values_list("course_id", flat=True)
+        )
+
+    def student_class_name(self, user_id: str) -> str:
+        profile = StudentProfile.objects.filter(pk=user_id).only("class_name").first()
+        return profile.class_name if profile else ""
+
+    def is_required_locked(self, user_id: str, course: Course) -> bool:
+        class_name = self.student_class_name(user_id)
+        return bool(
+            class_name
+            and course.course_type == "必修"
+            and course.target_class in {class_name, "全校"}
+        )
+
+    def assign_required_courses(self, user_id: str) -> List[str]:
+        """把學生班級與全校的必修加進課表。已選的略過，名額與衝堂不擋。"""
+        class_name = self.student_class_name(user_id)
+        missing_ids = [
+            course.pk
+            for course in self._required_courses(class_name)
+            if not Enrollment.objects.filter(user_id=user_id, course_id=course.pk).exists()
+        ]
+        if not missing_ids:
+            return []
+        added = []
+        with self.lock:
+            with transaction.atomic():
+                already = set(
+                    Enrollment.objects.filter(user_id=user_id, course_id__in=missing_ids)
+                    .values_list("course_id", flat=True)
+                )
+                for course in Course.objects.select_for_update().filter(pk__in=missing_ids):
+                    if course.pk in already:
+                        continue
+                    try:
+                        Enrollment.objects.create(user_id=user_id, course=course)
+                    except IntegrityError:
+                        continue
+                    course.enrolled_count += 1
+                    course.save(update_fields=["enrolled_count"])
+                    self.ensure_enrollment_study_record(user_id, course)
+                    added.append(course.name)
+        return added
 
     def _get_credit_rule(self, user_id: str) -> UserCreditLimit:
         rule, _ = UserCreditLimit.objects.get_or_create(
@@ -405,6 +477,9 @@ class CourseDataStore:
                 if enrollment is None:
                     return False, "您尚未選修此課程"
 
+                if not force and self.is_required_locked(user_id, course):
+                    return False, "必修課程不可退選。"
+
                 current_credits = self.get_user_total_credits(user_id)
                 credit_floor = self.get_user_credit_floor(user_id)
                 remaining = current_credits - course.credits
@@ -599,7 +674,7 @@ class CourseDataStore:
 
     def save_student_identity(
         self, user, name: str, student_number: str, class_name: str
-    ) -> None:
+    ) -> List[str]:
         """寫入姓名、學號與班級。學號一旦有值就不再從這裡改。"""
         user.first_name = name
         user.last_name = ""
@@ -609,6 +684,7 @@ class CourseDataStore:
             profile.student_number = student_number
         profile.class_name = class_name
         profile.save(update_fields=["student_number", "class_name"])
+        return self.assign_required_courses(str(user.pk))
 
     def get_student_module(self, user_id: str) -> str:
         profile, _ = StudentProfile.objects.get_or_create(user_id=user_id)

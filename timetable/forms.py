@@ -110,6 +110,8 @@ class StudentIdentityForm(forms.Form):
             (name, name) for name in class_names
         ]
         self.fields["name"].widget.attrs["autocomplete"] = "name"
+        self.fields["name"].widget.attrs["placeholder"] = "請輸入姓名"
+        self.fields["student_number"].widget.attrs["placeholder"] = "請輸入學號"
         if self.number_locked:
             self.fields["student_number"].disabled = True
             self.fields["student_number"].help_text = "學號如需更正，請聯絡管理員。"
@@ -170,6 +172,10 @@ class StudentProfileAdminForm(forms.ModelForm):
         )
         self.fields["student_number"].required = False
         self.fields["student_number"].help_text = "留白代表尚未填寫。學生填過之後只能在這裡更正。"
+        self.fields["class_name"].help_text = (
+            "儲存後會把這個班級與全校的必修加入課表，學生不能自行退選。"
+            "改班級只會補上新的必修，不會自動退掉原來的課。"
+        )
         user = user_for_profile(getattr(self.instance, "user_id", ""))
         if user is not None and not self.is_bound:
             self.fields["name"].initial = (user.get_full_name() or "").strip()

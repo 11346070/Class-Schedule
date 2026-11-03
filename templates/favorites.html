@@ -48,7 +48,9 @@
                     </td>
                     <td class="col-actions" data-label="操作">
                         <div class="course-actions">
-                        {% if course.is_enrolled %}
+                        {% if course.is_enrolled and course.required_locked %}
+                            <button type="button" class="btn btn-secondary btn-sm" disabled>不可退選</button>
+                        {% elif course.is_enrolled %}
                             <form method="post" action="{% url 'drop_course' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="course_id" value="{{ course.course_id }}">

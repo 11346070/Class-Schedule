@@ -10,7 +10,10 @@
 
 <div class="settings-layout">
         <div class="detail-card settings-panel settings-panel-profile">
-            <h2>個人資料</h2>
+            <h2 class="settings-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.2"></circle><path d="M5 19.2c1.4-3 3.8-4.5 7-4.5s5.6 1.5 7 4.5"></path></svg>
+                個人資料
+            </h2>
             {% if not profile_complete %}
             <p class="credit-note">請填寫姓名、學號與班級。</p>
             {% endif %}
@@ -18,34 +21,42 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="profile">
                 {{ identity_form.non_field_errors }}
-                <div class="form-group">
-                    <label for="account-username">帳號</label>
-                    <input id="account-username" class="form-control" value="{{ user.username }}" disabled>
+                <div class="settings-fields">
+                    <div class="form-group span-2">
+                        <label for="account-username">帳號（唯讀）</label>
+                        <input id="account-username" class="form-control" value="{{ user.username }}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ identity_form.name.id_for_label }}">姓名</label>
+                        {{ identity_form.name }}
+                        {{ identity_form.name.errors }}
+                    </div>
+                    <div class="form-group">
+                        <label for="{{ identity_form.student_number.id_for_label }}">學號</label>
+                        {{ identity_form.student_number }}
+                        {% if identity_form.student_number.help_text %}
+                        <p class="field-hint">{{ identity_form.student_number.help_text }}</p>
+                        {% endif %}
+                        {{ identity_form.student_number.errors }}
+                    </div>
+                    <div class="form-group span-2">
+                        <label for="{{ identity_form.class_name.id_for_label }}">班級</label>
+                        {{ identity_form.class_name }}
+                        {{ identity_form.class_name.errors }}
+                        <p class="field-hint">儲存後，這個班級與全校的必修會加入課表，而且不能退選。</p>
+                    </div>
+                    <div class="settings-actions span-2">
+                        <button type="submit" class="btn btn-primary">儲存個人資料</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="{{ identity_form.name.id_for_label }}">姓名</label>
-                    {{ identity_form.name }}
-                    {{ identity_form.name.errors }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ identity_form.student_number.id_for_label }}">學號</label>
-                    {{ identity_form.student_number }}
-                    {% if identity_form.student_number.help_text %}
-                    <p class="field-hint">{{ identity_form.student_number.help_text }}</p>
-                    {% endif %}
-                    {{ identity_form.student_number.errors }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ identity_form.class_name.id_for_label }}">班級</label>
-                    {{ identity_form.class_name }}
-                    {{ identity_form.class_name.errors }}
-                </div>
-                <button type="submit" class="btn btn-primary">儲存個人資料</button>
             </form>
         </div>
 
         <div class="detail-card settings-panel settings-panel-password">
-            <h2>修改密碼</h2>
+            <h2 class="settings-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9" rx="2"></rect><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path></svg>
+                修改密碼
+            </h2>
             <form method="post" action="{% url 'account_settings' %}" class="settings-form">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="password">
@@ -80,30 +91,32 @@
                     </div>
                     {{ password_form.new_password2.errors }}
                 </div>
-                <button type="submit" class="btn btn-primary">更新密碼</button>
+                <button type="submit" class="btn btn-primary settings-btn-block">更新密碼</button>
             </form>
         </div>
 
         <div class="detail-card settings-panel settings-panel-avatar">
-            <h2>頭貼</h2>
+            <h2 class="settings-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"></rect><circle cx="9" cy="10" r="1.4"></circle><path d="M4 16.5l4.2-3.6 3 2.4 3.2-2.8L20 16.5"></path></svg>
+                頭貼設定
+            </h2>
             <form method="post" action="{% url 'account_settings' %}" enctype="multipart/form-data" class="avatar-form">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="avatar">
-                <div class="avatar-current">
+                <div class="settings-avatar">
                     {% if avatar_url %}
                     <img class="avatar-preview" src="{{ avatar_url }}" alt="{{ user.username }} 的頭貼">
                     {% else %}
                     <span class="avatar avatar-fallback" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
                     {% endif %}
-                    <p>沒有上傳時，會使用這個預設頭像。</p>
+                    <p>支援 JPG、PNG、WEBP，最大 2MB。</p>
                 </div>
-                <div class="form-group">
-                    <label for="{{ avatar_form.avatar.id_for_label }}">選擇圖片</label>
+                <label class="upload-drop">
+                    <span>+ 上傳圖片</span>
                     {{ avatar_form.avatar }}
-                    {{ avatar_form.avatar.errors }}
-                </div>
-                <p class="credit-note">接受 JPG、JPEG、PNG、WEBP，檔案最大 2MB。</p>
-                <button type="submit" class="btn btn-primary">更新頭貼</button>
+                </label>
+                {{ avatar_form.avatar.errors }}
+                <button type="submit" class="btn btn-primary settings-btn-block">儲存頭貼</button>
             </form>
         </div>
 
@@ -112,4 +125,16 @@
             <button type="submit" class="btn btn-danger">登出</button>
         </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll(".upload-drop input[type=file]").forEach(function (input) {
+    input.addEventListener("change", function () {
+        var label = input.parentElement.querySelector("span");
+        if (!label) return;
+        label.textContent = input.files && input.files[0] ? input.files[0].name : "+ 上傳圖片";
+    });
+});
+</script>
 {% endblock %}

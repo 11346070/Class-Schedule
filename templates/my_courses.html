@@ -44,12 +44,16 @@
                     <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
                     <td>{{ course.target_class }}</td>
                     <td>
+                        {% if course.required_locked %}
+                        <button type="button" class="btn btn-secondary btn-sm" disabled>不可退選</button>
+                        {% else %}
                         <form method="post" action="{% url 'drop_course' %}" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="course_id" value="{{ course.course_id }}">
                             <input type="hidden" name="next" value="my_courses">
                             <button type="submit" class="btn btn-danger btn-sm" data-confirm="確定要退選「{{ course.name }}」嗎？">退選</button>
                         </form>
+                        {% endif %}
                         <a href="{% url 'course_detail' course.course_id %}" class="btn btn-secondary btn-sm">詳情</a>
                     </td>
                 </tr>

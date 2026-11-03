@@ -37,6 +37,7 @@ class UserIdentityMixin:
     """在列表顯示帳號、姓名與信箱，而不只是 user_id。"""
 
     def _cached_user(self, user_id):
+        """只在這一次請求裡暫存。後台物件會一直重複使用，不能留到下一頁。"""
         cache = getattr(self, "_user_cache", None)
         if cache is None:
             cache = self._user_cache = {}
@@ -44,6 +45,14 @@ class UserIdentityMixin:
         if key not in cache:
             cache[key] = lookup_user(key)
         return cache[key]
+
+    def changelist_view(self, request, extra_context=None):
+        self._user_cache = {}
+        return super().changelist_view(request, extra_context)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        self._user_cache = {}
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
     @admin.display(description="帳號", ordering="user_id")
     def account_name(self, obj):
@@ -160,6 +169,26 @@ class CourseAdmin(admin.ModelAdmin):
             return ("course_id", "enrolled_count")
         return ("enrolled_count",)
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.course_type != "必修" or not obj.target_class:
+            return
+        if obj.target_class == "全校":
+            user_ids = StudentProfile.objects.exclude(class_name="").values_list("user_id", flat=True)
+        else:
+            user_ids = StudentProfile.objects.filter(class_name=obj.target_class).values_list(
+                "user_id", flat=True
+            )
+        added_students = 0
+        for user_id in user_ids:
+            if course_store.assign_required_courses(user_id):
+                added_students += 1
+        if added_students:
+            self.message_user(
+                request,
+                f"已把必修加入 {added_students} 位學生的課表，學生不能自行退選。",
+            )
+
 
 class EnrollmentAdminForm(ModelForm):
     class Meta:
@@ -188,9 +217,11 @@ class EnrollmentAdmin(UserIdentityMixin, admin.ModelAdmin):
         "account_full_name",
         "account_email",
         "course",
+        "required_lock_label",
         "created_at",
     )
     list_filter = ("created_at", "course__course_type", "course__module")
+    list_select_related = ("course",)
     search_fields = ("user_id", "course__course_id", "course__name", "course__teacher")
     autocomplete_fields = ("course",)
     date_hierarchy = "created_at"
@@ -201,6 +232,12 @@ class EnrollmentAdmin(UserIdentityMixin, admin.ModelAdmin):
         if obj:
             return ("user_id", "course", "created_at")
         return ("created_at",)
+
+    @admin.display(description="退選")
+    def required_lock_label(self, obj):
+        if course_store.is_required_locked(obj.user_id, obj.course):
+            return "學生不可退選"
+        return "—"
 
     def save_model(self, request, obj, form, change):
         if change:
@@ -325,6 +362,11 @@ class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
     @admin.display(description="班級", ordering="class_name")
     def class_name_display(self, obj):
         return obj.class_name or "—"
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.class_name and course_store.assign_required_courses(obj.user_id):
+            self.message_user(request, "已把必修課程加入這位學生的課表。學生不能自行退選。")
 
     @admin.display(description="頭貼", boolean=True)
     def has_avatar(self, obj):

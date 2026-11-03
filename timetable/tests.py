@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from timetable.data_store import course_store
-from timetable.models import StudentProfile
+from timetable.models import Enrollment, StudentProfile
 
 
 class ModuleCreditLimitTests(TestCase):
@@ -500,6 +500,61 @@ class AccountSettingsTests(TestCase):
         self.assertContains(response, "這個學號已經有人使用")
         self.assertFalse(StudentProfile.objects.filter(user_id=str(self.user.pk), student_number="A12345").exists())
 
+    def test_selected_class_adds_required_courses_that_cannot_be_dropped(self):
+        course_store.ensure_seeded()
+        saved = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林同學",
+            "student_number": "A12345",
+            "class_name": "資工一",
+        }, follow=True)
+        self.assertContains(saved, "必修課程已加入課表")
+        user_id = str(self.user.pk)
+        for course_id in ("CS101", "CS102", "CS103", "PE101", "PE102"):
+            self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id=course_id).exists())
+        self.assertFalse(Enrollment.objects.filter(user_id=user_id, course_id="CS201").exists())
+
+        blocked, message = course_store.drop_course(user_id, "CS101")
+        self.assertFalse(blocked)
+        self.assertIn("不可退選", message)
+        denied = self.client.post(reverse("drop_course"), {"course_id": "CS101", "next": "index"}, follow=True)
+        self.assertContains(denied, "必修課程不可退選")
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS101").exists())
+
+        listing = self.client.get(reverse("course_list"))
+        self.assertContains(listing, "不可退選")
+        detail = self.client.get(reverse("course_detail", args=["CS101"]))
+        self.assertContains(detail, "不可退選")
+        self.assertNotContains(detail, "退選此課程")
+        home = self.client.get(reverse("index"))
+        self.assertContains(home, "程式設計(一)")
+        self.assertContains(home, "不可退選")
+
+        changed = self.client.post(reverse("account_settings"), {
+            "action": "profile",
+            "name": "林同學",
+            "class_name": "資工二",
+        }, follow=True)
+        self.assertContains(changed, "已更新個人資料")
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS201").exists())
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS101").exists())
+        dropped, _message = course_store.drop_course(user_id, "CS101")
+        self.assertTrue(dropped)
+        still_locked, message = course_store.drop_course(user_id, "CS202")
+        self.assertFalse(still_locked)
+        self.assertIn("不可退選", message)
+
+    def test_settings_page_uses_the_profile_layout(self):
+        response = self.client.get(reverse("account_settings"))
+        self.assertContains(response, "帳號（唯讀）")
+        self.assertContains(response, "請輸入姓名")
+        self.assertContains(response, "儲存個人資料")
+        self.assertContains(response, "頭貼設定")
+        self.assertContains(response, "上傳圖片")
+        page = response.content.decode()
+        self.assertLess(page.find("個人資料"), page.find("修改密碼"))
+        self.assertLess(page.find("修改密碼"), page.find("頭貼設定"))
+
     def test_homepage_reminder_follows_the_system_rule(self):
         course_store.ensure_seeded()
         StudentProfile.objects.update_or_create(
@@ -638,6 +693,10 @@ class AdminIdentityTests(TestCase):
         self.assertEqual(student.first_name, "王小明")
         self.assertEqual(profile.student_number, "C12345")
         self.assertEqual(profile.class_name, "資工二")
+        self.assertTrue(Enrollment.objects.filter(user_id=str(student.pk), course_id="CS201").exists())
+        self.assertFalse(Enrollment.objects.filter(user_id=str(student.pk), course_id="CS101").exists())
+        roster = self.client.get("/admin/timetable/enrollment/")
+        self.assertContains(roster, "學生不可退選")
 
 
 class StudyRecordSyncTests(TestCase):
