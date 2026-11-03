@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.db.models import Q
-from django.forms import ModelForm
+from django import forms
 from django.http import HttpResponseRedirect
 
 from .data_store import course_store
@@ -20,6 +20,7 @@ from .models import (
     Favorite,
     GraduationRequirement,
     ModuleCreditLimit,
+    SchoolClass,
     StudentProfile,
     StudyRecord,
     UserCreditLimit,
@@ -111,10 +112,45 @@ class TimetableUserAdmin(DjangoUserAdmin):
     list_per_page = 25
 
 
-class CourseAdminForm(ModelForm):
+class CourseAdminForm(forms.ModelForm):
     class Meta:
         model = Course
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        course_store.ensure_seeded()
+        modules = [("", "不屬於模組")]
+        for rule in course_store.module_rules():
+            modules.append((rule.module, rule.module))
+        self.fields["module"].widget = forms.Select(choices=modules)
+        self.fields["module"].help_text = "選項來自「模組學分限制」。新模組請先到那裡新增。"
+
+        class_names = [("", "請選擇開課班級")]
+        for name in course_store.class_names():
+            class_names.append((name, name))
+        class_names.append(("全校", "全校"))
+        current = (getattr(self.instance, "target_class", "") or "").strip()
+        if current and current not in {value for value, _label in class_names}:
+            class_names.append((current, current))
+        self.fields["target_class"].widget = forms.Select(choices=class_names)
+        self.fields["target_class"].help_text = (
+            "選項來自「班級」，也可以選全校。新班級請先到「班級」新增。"
+        )
+
+    def clean_module(self):
+        value = (self.cleaned_data.get("module") or "").strip()
+        allowed = {choice for choice, _label in self.fields["module"].widget.choices}
+        if value not in allowed:
+            raise ValidationError("請選擇已建立的模組，或留「不屬於模組」。")
+        return value
+
+    def clean_target_class(self):
+        value = (self.cleaned_data.get("target_class") or "").strip()
+        allowed = {choice for choice, _label in self.fields["target_class"].widget.choices if choice}
+        if value not in allowed:
+            raise ValidationError("請選擇已建立的班級，或全校。")
+        return value
 
     def clean_syllabus(self):
         uploaded = self.cleaned_data.get("syllabus")
@@ -180,17 +216,28 @@ class CourseAdmin(admin.ModelAdmin):
             if target == "全校" or (profile.class_name or "").strip() == target
         ]
         added_students = 0
+        displaced = []
+        conflicts = []
         for user_id in user_ids:
-            if course_store.assign_required_courses(user_id):
+            result = course_store.assign_required_courses(user_id)
+            if result:
                 added_students += 1
+            displaced.extend(result.displaced)
+            conflicts.extend(result.conflicts)
         if added_students:
+            message = f"已把必修加入 {added_students} 位學生的課表，學生不能自行退選。"
+            if displaced:
+                message += "衝堂的課程已退選：" + "、".join(dict.fromkeys(displaced)) + "。"
+            self.message_user(request, message)
+        if conflicts:
             self.message_user(
                 request,
-                f"已把必修加入 {added_students} 位學生的課表，學生不能自行退選。",
+                "這門必修與其他必修時間重疊，兩門都會留在課表，請調整上課時間。",
+                messages.WARNING,
             )
 
 
-class EnrollmentAdminForm(ModelForm):
+class EnrollmentAdminForm(forms.ModelForm):
     class Meta:
         model = Enrollment
         fields = "__all__"
@@ -303,6 +350,26 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
+@admin.register(SchoolClass)
+class SchoolClassAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+    ordering = ("name",)
+    list_per_page = 25
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ("name",)
+        return ()
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["name"].help_text = (
+            "新增後會出現在課程的開課班級，以及學生的班級選單。不用建立「全校」。"
+        )
+        return form
+
+
 @admin.register(ModuleCreditLimit)
 class ModuleCreditLimitAdmin(admin.ModelAdmin):
     list_display = ("module", "min_credits", "max_credits")
@@ -365,8 +432,20 @@ class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        if obj.class_name and course_store.assign_required_courses(obj.user_id):
-            self.message_user(request, "已把必修課程加入這位學生的課表。學生不能自行退選。")
+        if not obj.class_name:
+            return
+        result = course_store.assign_required_courses(obj.user_id)
+        if result:
+            message = "已把必修課程加入這位學生的課表。學生不能自行退選。"
+            if result.displaced:
+                message += "衝堂的課程已退選：" + "、".join(result.displaced) + "。"
+            self.message_user(request, message)
+        if result.conflicts:
+            self.message_user(
+                request,
+                "必修之間時間重疊，兩門都會留在課表，請調整上課時間。",
+                messages.WARNING,
+            )
 
     @admin.display(description="頭貼", boolean=True)
     def has_avatar(self, obj):

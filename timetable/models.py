@@ -137,6 +137,7 @@ class Course(models.Model):
     def save(self, *args, **kwargs):
         self.course_type = (self.course_type or "").strip()
         self.target_class = (self.target_class or "").strip()
+        self.module = (self.module or "").strip()
         if self.course_id:
             self.course_id = self.course_id.strip()
         super().save(*args, **kwargs)
@@ -282,6 +283,31 @@ class CourseReview(models.Model):
         return f"{self.user_id} {self.course_id} 作業{self.homework} 考試{self.exam}"
 
 
+class SchoolClass(models.Model):
+    """學生可選、課程可開課的班級。全校不是班級，只用於課程。"""
+    name = models.CharField("班級名稱", max_length=50, primary_key=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "班級"
+        verbose_name_plural = "班級"
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+        self.name = (self.name or "").strip()
+        if not self.name:
+            raise ValidationError({"name": "請填寫班級名稱。"})
+        if self.name == "全校":
+            raise ValidationError({"name": "「全校」只用於課程的開課對象，不用另外建班級。"})
+
+    def save(self, *args, **kwargs):
+        self.name = (self.name or "").strip()
+        super().save(*args, **kwargs)
+
+
 class StudentProfile(models.Model):
     """學生的學號、班級與主修模組。另一模組學分最多認列到上限。"""
     user_id = models.CharField("使用者 ID", max_length=64, primary_key=True)
@@ -290,6 +316,7 @@ class StudentProfile(models.Model):
     )
     class_name = models.CharField("班級", max_length=50, blank=True, default="")
     module = models.CharField("主修模組", max_length=20, blank=True, default="")
+    schedule_note = models.TextField("課表提醒", blank=True, default="")
     notify_at_floor = models.BooleanField("已達退選下限時提醒", default=True)
     notify_near_floor = models.BooleanField("接近退選下限時提醒", default=True)
     notify_at_limit = models.BooleanField("已達學分上限時提醒", default=True)

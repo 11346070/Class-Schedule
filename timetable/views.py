@@ -176,6 +176,76 @@ PERIOD_TIMES = {
 }
 
 
+def _periods_overlap(start1, end1, start2, end2):
+    return not (end1 < start2 or end2 < start1)
+
+
+def build_weekly_schedule(enrolled_courses):
+    """同一格有多門課時並排，避免後加的必修被蓋掉。"""
+    by_day = {}
+    for course in enrolled_courses:
+        by_day.setdefault(course.weekday, []).append(course)
+    placement = {}
+    for courses in by_day.values():
+        ordered = sorted(courses, key=lambda item: (item.start_period, item.course_id))
+        lane_ends = []
+        assigned = []
+        for course in ordered:
+            lane = 0
+            while lane < len(lane_ends) and lane_ends[lane] >= course.start_period:
+                lane += 1
+            if lane == len(lane_ends):
+                lane_ends.append(course.end_period)
+            else:
+                lane_ends[lane] = course.end_period
+            assigned.append((course, lane))
+        for course, lane in assigned:
+            count = 1
+            for other, other_lane in assigned:
+                if other.course_id == course.course_id:
+                    continue
+                if _periods_overlap(
+                    course.start_period,
+                    course.end_period,
+                    other.start_period,
+                    other.end_period,
+                ):
+                    count = max(count, lane + 1, other_lane + 1)
+            placement[course.course_id] = (lane, count)
+
+    weekly_schedule = []
+    for period in range(1, 14):
+        period_row = {
+            "period": period,
+            "time": PERIOD_TIMES.get(period, ""),
+            "courses": [],
+        }
+        for weekday in range(1, 8):
+            items = []
+            continuation = False
+            for course in enrolled_courses:
+                if course.weekday != weekday:
+                    continue
+                if course.start_period == period:
+                    lane, count = placement[course.course_id]
+                    items.append({
+                        "course": course,
+                        "rowspan": course.end_period - course.start_period + 1,
+                        "lane": lane,
+                        "count": count,
+                    })
+                elif course.start_period < period <= course.end_period:
+                    continuation = True
+            if items:
+                period_row["courses"].append({"items": items})
+            elif continuation:
+                period_row["courses"].append({"is_continuation": True})
+            else:
+                period_row["courses"].append(None)
+        weekly_schedule.append(period_row)
+    return weekly_schedule
+
+
 @login_required
 @require_http_methods(["GET"])
 def index(request):
@@ -187,32 +257,9 @@ def index(request):
     credit_floor = course_store.get_user_credit_floor(user_id)
     uncounted_credits = max(total_credits - credit_limit, 0)
     
-    # 建立每週課表（簡化版，直接給模板使用）
-    weekly_schedule = []
-    for period in range(1, 14):
-        period_row = {
-            'period': period,
-            'time': PERIOD_TIMES.get(period, ''),
-            'courses': [],
-        }
-        for weekday in range(1, 8):
-            # 找出這個時段的課程
-            period_course = None
-            for course in enrolled_courses:
-                if (course.weekday == weekday and 
-                    course.start_period <= period <= course.end_period):
-                    # 只在開始節次顯示完整課程區塊
-                    if course.start_period == period:
-                        period_course = {
-                            'course': course,
-                            'rowspan': course.end_period - course.start_period + 1
-                        }
-                    else:
-                        # 中間節次用特殊標記（CSS 會處理）
-                        period_course = {'course': course, 'is_continuation': True}
-                    break
-            period_row['courses'].append(period_course)
-        weekly_schedule.append(period_row)
+    weekly_schedule = build_weekly_schedule(enrolled_courses)
+    schedule_notes = course_store.consume_schedule_note(user_id)
+    schedule_notes.extend(course_store.required_overlap_notes(enrolled_courses))
     
     context = {
         'enrolled_courses': enrolled_courses,
@@ -226,6 +273,7 @@ def index(request):
         **course_store.get_notification_prefs(user_id),
         'enrolled_count': len(enrolled_courses),
         'weekly_schedule': weekly_schedule,
+        'schedule_notes': schedule_notes,
         'weekdays': [
             (1, '週一'), (2, '週二'), (3, '週三'),
             (4, '週四'), (5, '週五'), (6, '週六'), (7, '週日')

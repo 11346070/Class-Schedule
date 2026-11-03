@@ -173,9 +173,17 @@ class StudentProfileAdminForm(forms.ModelForm):
         self.fields["student_number"].required = False
         self.fields["student_number"].help_text = "留白代表尚未填寫。學生填過之後只能在這裡更正。"
         self.fields["class_name"].help_text = (
-            "儲存後會把這個班級與全校的必修加入課表，學生不能自行退選。"
+            "選項來自後台的班級。儲存後會把這個班級與全校的必修加入課表，學生不能自行退選。"
             "改班級只會補上新的必修，不會自動退掉原來的課。"
         )
+        modules = [("", "尚未選擇")]
+        for rule in course_store.module_rules():
+            modules.append((rule.module, rule.module))
+        current_module = (getattr(self.instance, "module", "") or "").strip()
+        if current_module and current_module not in {value for value, _label in modules}:
+            modules.append((current_module, current_module))
+        self.fields["module"].widget = forms.Select(choices=modules)
+        self.fields["module"].help_text = "選項來自「模組學分限制」。"
         user = user_for_profile(getattr(self.instance, "user_id", ""))
         if user is not None and not self.is_bound:
             self.fields["name"].initial = (user.get_full_name() or "").strip()
@@ -204,7 +212,16 @@ class StudentProfileAdminForm(forms.ModelForm):
             return ""
         allowed = {choice for choice, _label in self.fields["class_name"].widget.choices if choice}
         if value not in allowed:
-            raise ValidationError("請選擇課程裡已有的開課班級。")
+            raise ValidationError("請選擇已建立的班級。")
+        return value
+
+    def clean_module(self):
+        value = (self.cleaned_data.get("module") or "").strip()
+        if not value:
+            return ""
+        allowed = {choice for choice, _label in self.fields["module"].widget.choices if choice}
+        if value not in allowed:
+            raise ValidationError("請選擇已建立的模組。")
         return value
 
     def save(self, commit=True):

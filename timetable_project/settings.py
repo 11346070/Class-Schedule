@@ -127,6 +127,11 @@ SIMPLEUI_CONFIG = {
                     'url': '/admin/timetable/course/',
                 },
                 {
+                    'name': '班級',
+                    'icon': 'fas fa-users',
+                    'url': '/admin/timetable/schoolclass/',
+                },
+                {
                     'name': '選課紀錄',
                     'icon': 'fas fa-user-check',
                     'url': '/admin/timetable/enrollment/',

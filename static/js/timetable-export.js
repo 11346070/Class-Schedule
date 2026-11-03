@@ -77,18 +77,24 @@
             var cells = '<th><span>' + row.period + '</span>' +
                 (row.time ? '<small>' + escapeHtml(row.time) + '</small>' : '') + '</th>';
             for (var day = 0; day < 7; day += 1) {
-                var block = blocks.find(function (item) {
+                var matches = blocks.filter(function (item) {
                     return item.row === index && item.day === day;
                 });
-                if (block) {
-                    var course = block.course;
-                    var color = COLORS[course.course_type] || COLORS["選修"];
-                    cells += '<td class="slot" rowspan="' + block.span + '">' +
-                        '<div class="block" style="background:' + color.fill + ';color:' + color.text + ';border-left-color:' + color.bar + '">' +
-                        courseLines(course).map(function (line, lineIndex) {
-                            return '<p class="' + (lineIndex === 0 ? "name" : "meta") + '">' + escapeHtml(line) + '</p>';
+                if (matches.length) {
+                    var span = matches.reduce(function (max, item) {
+                        return Math.max(max, item.span);
+                    }, 1);
+                    cells += '<td class="slot" rowspan="' + span + '">' +
+                        matches.map(function (block) {
+                            var course = block.course;
+                            var color = COLORS[course.course_type] || COLORS["選修"];
+                            return '<div class="block" style="background:' + color.fill + ';color:' + color.text + ';border-left-color:' + color.bar + '">' +
+                                courseLines(course).map(function (line, lineIndex) {
+                                    return '<p class="' + (lineIndex === 0 ? "name" : "meta") + '">' + escapeHtml(line) + '</p>';
+                                }).join("") +
+                                '</div>';
                         }).join("") +
-                        '</div></td>';
+                        '</td>';
                 } else if (!occupied[index + ":" + day]) {
                     cells += '<td class="slot"></td>';
                 }
@@ -208,12 +214,20 @@
 
         data.courses.forEach(function (course) {
             var color = COLORS[course.course_type] || COLORS["選修"];
+            var mates = data.courses.filter(function (other) {
+                return other.weekday === course.weekday && other.start_period === course.start_period;
+            }).sort(function (a, b) {
+                return String(a.course_id).localeCompare(String(b.course_id));
+            });
+            var lane = Math.max(mates.findIndex(function (other) {
+                return other.course_id === course.course_id;
+            }), 0);
             segments(course).forEach(function (range) {
                 var start = rowIndex(range[0]);
                 var span = rowIndex(range[1]) - start + 1;
-                var x = originX + periodWidth + (course.weekday - 1) * dayWidth + 6;
+                var boxWidth = (dayWidth - 12) / mates.length;
+                var x = originX + periodWidth + (course.weekday - 1) * dayWidth + 6 + lane * boxWidth;
                 var y = tableTop + start * rowHeight + 6;
-                var boxWidth = dayWidth - 12;
                 var boxHeight = span * rowHeight - 12;
                 ctx.fillStyle = color.fill;
                 ctx.fillRect(x, y, boxWidth, boxHeight);

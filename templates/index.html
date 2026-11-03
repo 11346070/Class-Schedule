@@ -87,6 +87,9 @@
     <div class="section-head">
         <h2>本週課程表</h2>
     </div>
+    {% for note in schedule_notes %}
+    <p class="credit-note">{{ note }}</p>
+    {% endfor %}
     {% if enrolled_courses %}
     <div class="schedule-table-wrapper">
         <table class="schedule-table">
@@ -112,14 +115,14 @@
                     </td>
                     {% for cell in period_row.courses %}
                     <td class="schedule-cell">
-                        {% if cell %}
-                            {% if not cell.is_continuation %}
-                            <div class="course-block type-{{ cell.course.course_type }}" style="height: calc({{ cell.rowspan }} * 60px);">
-                                <div class="course-name">{{ cell.course.name }}</div>
-                                <div class="course-info">{{ cell.course.teacher }}</div>
-                                <div class="course-info">{{ cell.course.start_period }}-{{ cell.course.end_period }}節</div>
+                        {% if cell and not cell.is_continuation %}
+                            {% for item in cell.items %}
+                            <div class="course-block type-{{ item.course.course_type }}{% if item.count > 1 %} is-shared{% endif %}" style="height: calc({{ item.rowspan }} * 60px);{% if item.count > 1 %} width: calc((100% - 8px) / {{ item.count }}); left: calc(4px + {{ item.lane }} * (100% - 8px) / {{ item.count }});{% endif %}">
+                                <div class="course-name">{{ item.course.name }}</div>
+                                <div class="course-info">{{ item.course.teacher }}</div>
+                                <div class="course-info">{{ item.course.start_period }}-{{ item.course.end_period }}節</div>
                             </div>
-                            {% endif %}
+                            {% endfor %}
                         {% endif %}
                     </td>
                     {% endfor %}
@@ -175,5 +178,5 @@
 
 {% block extra_js %}
 {{ export_payload|json_script:"timetable-export-data" }}
-<script src="/static/js/timetable-export.js?v=20261030b"></script>
+<script src="/static/js/timetable-export.js?v=20261103c"></script>
 {% endblock %}

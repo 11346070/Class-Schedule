@@ -742,6 +742,117 @@ class AdminIdentityTests(TestCase):
         self.assertContains(rejected, "id_course_type_error")
         self.assertFalse(Enrollment.objects.filter(course_id="../secret").exists())
 
+    def test_module_and_class_are_chosen_from_admin_lists(self):
+        course_store.ensure_seeded()
+        staff = User.objects.create_superuser("class-boss", "class-boss@example.com", "Old-password-1")
+        student = User.objects.create_user(username="class-picker", password="Old-password-1")
+        self.client.force_login(staff)
+        added = self.client.post("/admin/timetable/schoolclass/add/", {"name": "資工四"})
+        self.assertEqual(added.status_code, 302)
+        blocked = self.client.post("/admin/timetable/schoolclass/add/", {"name": "全校"})
+        self.assertContains(blocked, "不用另外建班級")
+        form = self.client.get("/admin/timetable/course/add/")
+        self.assertContains(form, "資工四")
+        self.assertContains(form, "不屬於模組")
+        self.assertContains(form, "全校")
+        rejected = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS401",
+            "name": "不該建立",
+            "teacher": "新教授",
+            "course_type": "選修",
+            "module": "沒有這個模組",
+            "target_class": "沒有這班",
+            "weekday": "1",
+            "start_period": "1",
+            "end_period": "2",
+            "credits": "2",
+            "total_quota": "20",
+        })
+        self.assertContains(rejected, "請選擇已建立的模組")
+        self.assertContains(rejected, "請選擇已建立的班級")
+        self.client.force_login(student)
+        settings_page = self.client.get(reverse("account_settings"))
+        self.assertContains(settings_page, "資工四")
+
+    def test_new_required_course_drops_a_conflicting_elective(self):
+        course_store.ensure_seeded()
+        student = User.objects.create_user(username="clash-student", password="Old-password-1")
+        user_id = str(student.pk)
+        StudentProfile.objects.create(
+            user_id=user_id,
+            class_name="資工一",
+            student_number="A22222",
+        )
+        course_store.assign_required_courses(user_id)
+        enrolled, message = course_store.enroll_course(user_id, "GE202")
+        self.assertTrue(enrolled, message)
+        staff = User.objects.create_superuser("clash-boss", "clash-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        created = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS110",
+            "name": "必修衝堂",
+            "teacher": "新教授",
+            "course_type": "必修",
+            "module": "",
+            "target_class": "資工一",
+            "weekday": "2",
+            "start_period": "6",
+            "end_period": "7",
+            "credits": "2",
+            "total_quota": "40",
+        }, follow=True)
+        self.assertContains(created, "CS110")
+        self.assertFalse(Enrollment.objects.filter(user_id=user_id, course_id="GE202").exists())
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS110").exists())
+        self.client.force_login(student)
+        home = self.client.get(reverse("index"))
+        self.assertContains(home, "必修衝堂")
+        self.assertContains(home, "已退選")
+        self.assertNotContains(home, 'value="GE202"')
+
+    def test_two_required_courses_in_the_same_slot_stay_visible(self):
+        course_store.ensure_seeded()
+        student = User.objects.create_user(username="double-student", password="Old-password-1")
+        user_id = str(student.pk)
+        StudentProfile.objects.create(
+            user_id=user_id,
+            class_name="資工一",
+            student_number="A33333",
+        )
+        staff = User.objects.create_superuser("double-boss", "double-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        course_fields = {
+            "teacher": "新教授",
+            "course_type": "必修",
+            "module": "",
+            "target_class": "資工一",
+            "weekday": "2",
+            "start_period": "6",
+            "end_period": "7",
+            "credits": "2",
+            "total_quota": "40",
+        }
+        first = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS110",
+            "name": "必修甲",
+            **course_fields,
+        })
+        self.assertEqual(first.status_code, 302)
+        second = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS111",
+            "name": "必修乙",
+            **course_fields,
+        }, follow=True)
+        self.assertContains(second, "CS111")
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS110").exists())
+        self.assertTrue(Enrollment.objects.filter(user_id=user_id, course_id="CS111").exists())
+        self.client.force_login(student)
+        home = self.client.get(reverse("index"))
+        self.assertContains(home, "必修甲")
+        self.assertContains(home, "必修乙")
+        self.assertContains(home, "is-shared")
+        self.assertContains(home, "上課時間重疊")
+
 
 class StudyRecordSyncTests(TestCase):
     def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):

@@ -21,6 +21,7 @@ from .models import (
     Favorite,
     GraduationRequirement,
     ModuleCreditLimit,
+    SchoolClass,
     StudentProfile,
     StudyRecord,
     UserCreditLimit,
@@ -64,6 +65,15 @@ SAMPLE_COURSES = [
 ]
 
 
+class RequiredAssignResult(list):
+    """這次新加入的必修名稱。空的代表沒有新課。"""
+
+    def __init__(self, added=None, displaced=None, conflicts=None):
+        super().__init__(added or [])
+        self.displaced = list(dict.fromkeys(displaced or []))
+        self.conflicts = list(dict.fromkeys(conflicts or []))
+
+
 class CourseDataStore:
     """
     課程資料儲存管理（SQLite）
@@ -83,7 +93,7 @@ class CourseDataStore:
     def __init__(self):
         if self._initialized:
             return
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self._initialized = True
 
     def ensure_seeded(self):
@@ -93,6 +103,7 @@ class CourseDataStore:
                 if not Course.objects.exists():
                     self._seed_sample_courses()
         self._ensure_module_courses()
+        self.ensure_school_classes()
 
     def _seed_sample_courses(self):
         Course.objects.bulk_create([
@@ -228,8 +239,12 @@ class CourseDataStore:
             and (course.target_class or "").strip() in {class_name.strip(), "全校"}
         )
 
-    def assign_required_courses(self, user_id: str) -> List[str]:
-        """把學生班級與全校的必修加進課表。已選的略過，名額與衝堂不擋。"""
+    def assign_required_courses(self, user_id: str) -> "RequiredAssignResult":
+        """把學生班級與全校的必修加進課表。名額不擋。
+
+        與目前必修衝堂的選修會退掉，避免課表藏起其中一門。
+        兩門必修撞期則都留下，由課表並排顯示。
+        """
         class_name = self.student_class_name(user_id)
         missing_ids = [
             course.pk
@@ -237,8 +252,10 @@ class CourseDataStore:
             if not Enrollment.objects.filter(user_id=user_id, course_id=course.pk).exists()
         ]
         if not missing_ids:
-            return []
+            return RequiredAssignResult()
         added = []
+        displaced = []
+        conflicts = []
         with self.lock:
             with transaction.atomic():
                 already = set(
@@ -248,6 +265,13 @@ class CourseDataStore:
                 for course in Course.objects.select_for_update().filter(pk__in=missing_ids):
                     if course.pk in already:
                         continue
+                    for other in self._overlapping_enrolled(user_id, course):
+                        if self.is_required_locked(user_id, other):
+                            conflicts.append(other.name)
+                            continue
+                        dropped, _message = self.drop_course(user_id, other.course_id, force=True)
+                        if dropped:
+                            displaced.append(other.name)
                     try:
                         Enrollment.objects.create(user_id=user_id, course=course)
                     except IntegrityError:
@@ -256,7 +280,55 @@ class CourseDataStore:
                     course.save(update_fields=["enrolled_count"])
                     self.ensure_enrollment_study_record(user_id, course)
                     added.append(course.name)
-        return added
+                if added and displaced:
+                    note = "必修已加入課表，衝堂的課程已退選：" + "、".join(dict.fromkeys(displaced)) + "。"
+                    StudentProfile.objects.filter(pk=user_id).update(schedule_note=note)
+        return RequiredAssignResult(added, displaced, conflicts)
+
+    def consume_schedule_note(self, user_id: str) -> List[str]:
+        profile = StudentProfile.objects.filter(pk=user_id).only("schedule_note").first()
+        if profile is None or not profile.schedule_note:
+            return []
+        note = profile.schedule_note
+        StudentProfile.objects.filter(pk=user_id).update(schedule_note="")
+        return [note]
+
+    def required_overlap_notes(self, courses: List[Course]) -> List[str]:
+        notes = []
+        seen = set()
+        locked = [course for course in courses if getattr(course, "required_locked", False)]
+        for index, course in enumerate(locked):
+            for other in locked[index + 1:]:
+                if course.weekday != other.weekday or not self._periods_overlap(
+                    course.start_period,
+                    course.end_period,
+                    other.start_period,
+                    other.end_period,
+                ):
+                    continue
+                key = tuple(sorted((course.course_id, other.course_id)))
+                if key in seen:
+                    continue
+                seen.add(key)
+                notes.append(
+                    f"必修「{course.name}」與「{other.name}」上課時間重疊，請聯絡管理員調整上課時間。"
+                )
+        return notes
+
+    def _overlapping_enrolled(self, user_id: str, course: Course) -> List[Course]:
+        overlaps = []
+        enrolled = Course.objects.filter(enrollments__user_id=user_id).exclude(pk=course.pk)
+        for existing in enrolled:
+            if existing.weekday != course.weekday:
+                continue
+            if self._periods_overlap(
+                existing.start_period,
+                existing.end_period,
+                course.start_period,
+                course.end_period,
+            ):
+                overlaps.append(existing)
+        return overlaps
 
     def _get_credit_rule(self, user_id: str) -> UserCreditLimit:
         rule, _ = UserCreditLimit.objects.get_or_create(
@@ -477,18 +549,17 @@ class CourseDataStore:
                 if not force and self.is_required_locked(user_id, course):
                     return False, "必修課程不可退選。"
 
-                current_credits = self.get_user_total_credits(user_id)
-                credit_floor = self.get_user_credit_floor(user_id)
-                remaining = current_credits - course.credits
-                if not force and remaining < credit_floor:
-                    return (
-                        False,
-                        f"低於學分下限：目前 {current_credits} 學分，退選後將剩 "
-                        f"{remaining} 學分，下限為 {credit_floor} 學分。"
-                        "請聯絡管理員協助退選。",
-                    )
-
                 if not force:
+                    current_credits = self.get_user_total_credits(user_id)
+                    credit_floor = self.get_user_credit_floor(user_id)
+                    remaining = current_credits - course.credits
+                    if remaining < credit_floor:
+                        return (
+                            False,
+                            f"低於學分下限：目前 {current_credits} 學分，退選後將剩 "
+                            f"{remaining} 學分，下限為 {credit_floor} 學分。"
+                            "請聯絡管理員協助退選。",
+                        )
                     module_message = self._module_limit_message(
                         user_id, course, adding=False
                     )
@@ -650,15 +721,26 @@ class CourseDataStore:
             "unrecognized_total": unrecognized_total,
         }
 
+    def ensure_school_classes(self) -> None:
+        """課程或學生已經用到的班級名稱，補進班級清單。不會刪掉手動新增的班級。"""
+        names = set()
+        for raw in Course.objects.exclude(target_class="").values_list("target_class", flat=True):
+            name = (raw or "").strip()
+            if name and name != "全校":
+                names.add(name)
+        for raw in StudentProfile.objects.exclude(class_name="").values_list("class_name", flat=True):
+            name = (raw or "").strip()
+            if name and name != "全校":
+                names.add(name)
+        existing = set(SchoolClass.objects.values_list("name", flat=True))
+        missing = [SchoolClass(name=name) for name in sorted(names) if name not in existing]
+        if missing:
+            SchoolClass.objects.bulk_create(missing)
+
     def class_names(self, extra: str = "") -> List[str]:
-        """學生可選的班級。來自課程開課班級，不含全校。"""
+        """學生可選的班級。來自後台班級清單，不含全校。"""
         self.ensure_seeded()
-        names = list(
-            Course.objects.exclude(target_class__in=["", "全校"])
-            .order_by("target_class")
-            .values_list("target_class", flat=True)
-            .distinct()
-        )
+        names = list(SchoolClass.objects.order_by("name").values_list("name", flat=True))
         extra = (extra or "").strip()
         if extra and extra not in names and extra != "全校":
             names.append(extra)
