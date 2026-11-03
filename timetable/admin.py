@@ -117,31 +117,9 @@ class TimetableUserAdmin(DjangoUserAdmin):
 
 
 class CourseAdminForm(forms.ModelForm):
-    teacher = forms.ChoiceField(label="授課教師", required=False)
-    new_teacher = forms.CharField(
-        label="新增教師",
-        max_length=50,
-        required=False,
-        help_text="下拉選單沒有這位老師時，直接輸入姓名。儲存這門課後就會建立。",
-    )
-    classroom = forms.ChoiceField(label="教室", required=False)
-    new_classroom = forms.CharField(
-        label="新增教室",
-        max_length=50,
-        required=False,
-        help_text="下拉選單沒有這間教室時，直接輸入名稱。可以留空。",
-    )
-    target_class = forms.ChoiceField(label="開課班級", required=False)
-    new_class = forms.CharField(
-        label="新增班級",
-        max_length=50,
-        required=False,
-        help_text="下拉選單沒有這個班級時，直接輸入名稱。儲存這門課後就會建立，學生的班級選單也會出現。",
-    )
-
     class Meta:
         model = Course
-        exclude = ("school_class", "opens_to_all")
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -151,42 +129,16 @@ class CourseAdminForm(forms.ModelForm):
             modules.append((rule.module, rule.module))
         self.fields["module"].widget = forms.Select(choices=modules)
         self.fields["module"].help_text = "選項來自「模組學分限制」。新模組請先到那裡新增。"
-
-        teacher_names = [("", "請選擇授課教師")]
-        for name in Teacher.objects.order_by("name").values_list("name", flat=True):
-            teacher_names.append((name, name))
-        current_teacher = self.instance.teacher.name if self.instance.teacher_id else ""
-        if current_teacher and current_teacher not in {value for value, _label in teacher_names}:
-            teacher_names.append((current_teacher, current_teacher))
-        self.fields["teacher"].choices = teacher_names
-        self.fields["teacher"].help_text = "從清單選擇，或在下面的「新增教師」直接輸入。"
-        if not self.is_bound:
-            self.initial["teacher"] = current_teacher
-
-        room_names = [("", "尚未安排教室")]
-        for name in Classroom.objects.order_by("name").values_list("name", flat=True):
-            room_names.append((name, name))
-        current_room = self.instance.classroom.name if self.instance.classroom_id else ""
-        if current_room and current_room not in {value for value, _label in room_names}:
-            room_names.append((current_room, current_room))
-        self.fields["classroom"].choices = room_names
-        if not self.is_bound:
-            self.initial["classroom"] = current_room
-
-        class_names = [("", "請選擇開課班級")]
-        for name in course_store.class_names():
-            class_names.append((name, name))
-        class_names.append(("全校", "全校"))
-        current = (getattr(self.instance, "target_class", "") or "").strip()
-        if current and current not in {value for value, _label in class_names}:
-            class_names.append((current, current))
-        self.fields["target_class"].choices = class_names
-        self.fields["target_class"].required = False
-        self.fields["target_class"].help_text = (
-            "從清單選擇，或在下面的「新增班級」直接輸入。全校代表每個已填班級的學生都會遇到這門必修。"
-        )
-        if not self.is_bound:
-            self.initial["target_class"] = current
+        self.fields["teacher"].required = True
+        self.fields["teacher"].empty_label = "請選擇授課教師"
+        self.fields["teacher"].help_text = "沒有這位老師時，按右邊的加號建立。"
+        self.fields["classroom"].empty_label = "尚未安排教室"
+        self.fields["classroom"].help_text = "沒有這間教室時，按右邊的加號建立。可以留空。"
+        self.fields["school_class"].required = False
+        self.fields["school_class"].empty_label = "請選擇開課班級"
+        self.fields["school_class"].help_text = "沒有這個班級時，按右邊的加號建立。"
+        self.fields["opens_to_all"].label = "全校"
+        self.fields["opens_to_all"].help_text = "勾選後，每個已填班級的學生都會遇到這門必修，不用再選開課班級。"
 
     def clean_module(self):
         value = (self.cleaned_data.get("module") or "").strip()
@@ -195,84 +147,14 @@ class CourseAdminForm(forms.ModelForm):
             raise ValidationError("請選擇已建立的模組，或留「不屬於模組」。")
         return value
 
-    def clean_teacher(self):
-        value = (self.cleaned_data.get("teacher") or "").strip()
-        if (self.data.get("new_teacher") or "").strip():
-            return value
-        allowed = {choice for choice, _label in self.fields["teacher"].choices if choice}
-        if value not in allowed:
-            raise ValidationError("請選擇已建立的教師，或在新增教師填姓名。")
-        return value
-
-    def clean_classroom(self):
-        value = (self.cleaned_data.get("classroom") or "").strip()
-        if (self.data.get("new_classroom") or "").strip() or not value:
-            return value
-        allowed = {choice for choice, _label in self.fields["classroom"].choices if choice}
-        if value not in allowed:
-            raise ValidationError("請選擇已建立的教室，或在新增教室填名稱。")
-        return value
-
-    def clean_target_class(self):
-        value = (self.cleaned_data.get("target_class") or "").strip()
-        if (self.data.get("new_class") or "").strip():
-            return value
-        allowed = {choice for choice, _label in self.fields["target_class"].choices if choice}
-        if value not in allowed:
-            raise ValidationError("請選擇已建立的班級，或在新增班級填名稱。")
-        return value
-
-    def _assign_target_class(self, label):
-        if label == "全校":
-            self.instance.opens_to_all = True
-            self.instance.school_class = None
-            return
-        self.instance.opens_to_all = False
-        self.instance.school_class, _created = SchoolClass.objects.get_or_create(name=label)
-
-    def _assign_classroom(self, label):
-        if not label:
-            self.instance.classroom = None
-            return None
-        self.instance.classroom, _created = Classroom.objects.get_or_create(name=label)
-        return self.instance.classroom
-
-    def _assign_teacher(self, label):
-        self.instance.teacher, _created = Teacher.objects.get_or_create(name=label)
-        return self.instance.teacher
-
     def clean(self):
         cleaned = super().clean()
-        new_teacher = (cleaned.get("new_teacher") or "").strip()
-        raw_teacher = cleaned.get("teacher") or ""
-        if isinstance(raw_teacher, Teacher):
-            raw_teacher = raw_teacher.name
-        teacher_name = new_teacher or str(raw_teacher).strip()
-        if not teacher_name:
-            if "teacher" not in self.errors:
-                self.add_error("teacher", "請選擇已建立的教師，或在新增教師填姓名。")
-        else:
-            cleaned["teacher"] = self._assign_teacher(teacher_name)
-        new_room = (cleaned.get("new_classroom") or "").strip()
-        raw_room = cleaned.get("classroom") or ""
-        if isinstance(raw_room, Classroom):
-            raw_room = raw_room.name
-        room_name = new_room or str(raw_room).strip()
-        if "classroom" not in self.errors:
-            cleaned["classroom"] = self._assign_classroom(room_name)
-        new_name = (cleaned.get("new_class") or "").strip()
-        if not new_name:
-            label = (cleaned.get("target_class") or "").strip()
-            if not label:
-                self.add_error("target_class", "請選擇已建立的班級，或在新增班級填名稱。")
-                return cleaned
-            self._assign_target_class(label)
-            return cleaned
-        if new_name == "全校":
-            self.add_error("new_class", "「全校」不用另外建立，直接在開課班級選擇全校。")
-            return cleaned
-        self._assign_target_class(new_name)
-        cleaned["target_class"] = new_name
+        opens = bool(cleaned.get("opens_to_all"))
+        school_class = cleaned.get("school_class")
+        if opens and school_class:
+            self.add_error("school_class", "全校課程不用再指定班級。")
+        elif not opens and not school_class and "school_class" not in self.errors:
+            self.add_error("school_class", "請選擇開課班級，或勾選全校。")
         return cleaned
 
     def clean_syllabus(self):
@@ -325,7 +207,7 @@ class CourseAdmin(admin.ModelAdmin):
     ordering = ("course_id",)
     list_per_page = 25
     fieldsets = (
-        (None, {"fields": ("course_id", "name", "semester", "teacher", "new_teacher", "classroom", "new_classroom", "course_type", "module", "target_class", "new_class")}),
+        (None, {"fields": ("course_id", "name", "semester", "teacher", "classroom", "course_type", "module", "school_class", "opens_to_all")}),
         ("時間與學分", {"fields": ("weekday", "start_period", "end_period", "credits")}),
         ("名額", {"fields": ("total_quota", "enrolled_count")}),
         ("課程大綱", {"fields": ("syllabus",)}),

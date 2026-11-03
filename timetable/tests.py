@@ -9,6 +9,54 @@ from timetable.data_store import course_store
 from timetable.models import Enrollment, StudentProfile
 
 
+def _course_admin_payload(data):
+    """舊測試仍用教師名稱與班級名稱送出，這裡改成外鍵主鍵。"""
+    from timetable.models import Classroom, SchoolClass, Teacher
+
+    data = dict(data)
+    if "new_teacher" in data or (
+        data.get("teacher") not in (None, "") and not str(data.get("teacher")).isdigit()
+    ):
+        typed = str(data.pop("new_teacher", "") or "").strip()
+        chosen = str(data.get("teacher") or "").strip()
+        name = typed or ("" if chosen.isdigit() else chosen)
+        if name and not name.isdigit():
+            teacher, _created = Teacher.objects.get_or_create(name=name)
+            data["teacher"] = str(teacher.pk)
+        else:
+            data["teacher"] = chosen if chosen.isdigit() else ""
+    else:
+        data.pop("new_teacher", None)
+
+    if "new_classroom" in data or (
+        data.get("classroom") not in (None, "") and not str(data.get("classroom")).isdigit()
+    ):
+        typed = str(data.pop("new_classroom", "") or "").strip()
+        chosen = str(data.get("classroom") or "").strip()
+        name = typed or ("" if chosen.isdigit() else chosen)
+        if name and not name.isdigit():
+            room, _created = Classroom.objects.get_or_create(name=name)
+            data["classroom"] = str(room.pk)
+        else:
+            data["classroom"] = chosen if chosen.isdigit() else ""
+    else:
+        data.pop("new_classroom", None)
+
+    if "new_class" in data or "target_class" in data:
+        typed = str(data.pop("new_class", "") or "").strip()
+        chosen = str(data.pop("target_class", "") or "").strip()
+        label = typed or chosen
+        if label == "全校":
+            data["opens_to_all"] = "on"
+            data["school_class"] = ""
+        elif label:
+            school_class = SchoolClass.objects.filter(name=label).first()
+            if school_class is None and typed:
+                school_class = SchoolClass.objects.create(name=typed)
+            data["school_class"] = str(school_class.pk) if school_class else ""
+    return data
+
+
 class ModuleCreditLimitTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="module-student", password="password-1a")
@@ -84,6 +132,33 @@ class ModuleCreditLimitTests(TestCase):
         forced, _message = course_store.drop_course(self.user_id, "FIN201", force=True)
         self.assertTrue(forced)
         self.assertFalse(course_store.is_user_enrolled(self.user_id, "FIN201"))
+
+    def test_a_chosen_module_does_not_inherit_another_modules_floor(self):
+        from timetable.models import ModuleCreditLimit, UserCreditLimit
+
+        UserCreditLimit.objects.update_or_create(
+            user_id=self.user_id,
+            defaults={"credit_floor": 0, "credit_limit": 25},
+        )
+        course_store.set_student_module(self.user_id, "金融")
+        enrolled, message = course_store.enroll_course(self.user_id, "CS301")
+        self.assertTrue(enrolled, message)
+        ModuleCreditLimit.objects.update_or_create(
+            module="資訊", defaults={"min_credits": 3, "max_credits": 0}
+        )
+        self.assertEqual(course_store.get_module_limit_notes(self.user_id), [])
+        dropped, message = course_store.drop_course(self.user_id, "CS301")
+        self.assertTrue(dropped, message)
+        self.assertFalse(course_store.is_user_enrolled(self.user_id, "CS301"))
+
+        enrolled, message = course_store.enroll_course(self.user_id, "FIN201")
+        self.assertTrue(enrolled, message)
+        ModuleCreditLimit.objects.update_or_create(
+            module="金融", defaults={"min_credits": 3, "max_credits": 0}
+        )
+        dropped, message = course_store.drop_course(self.user_id, "FIN201")
+        self.assertFalse(dropped)
+        self.assertIn("金融模組學分下限", message)
 
     def test_progress_page_shows_the_admin_module_limits(self):
         from timetable.models import ModuleCreditLimit
@@ -246,14 +321,17 @@ class CourseDetailTests(TestCase):
             data={
                 "course_id": course.course_id,
                 "name": course.name,
-                "teacher": course.teacher.name,
+                "teacher": course.teacher_id,
+                "classroom": course.classroom_id or "",
+                "semester": course.semester_id or "",
                 "weekday": course.weekday,
                 "start_period": course.start_period,
                 "end_period": course.end_period,
                 "credits": course.credits,
                 "course_type": course.course_type,
                 "module": course.module,
-                "target_class": course.target_class,
+                "school_class": course.school_class_id or "",
+                "opens_to_all": course.opens_to_all,
                 "total_quota": course.total_quota,
                 "enrolled_count": course.enrolled_count,
             },
@@ -621,6 +699,7 @@ class AdminIdentityTests(TestCase):
 
         def post(path, data=None, *args, **kwargs):
             if isinstance(data, dict) and "/admin/timetable/course/" in path:
+                data = _course_admin_payload(data)
                 data = {
                     "extra_meetings-TOTAL_FORMS": "0",
                     "extra_meetings-INITIAL_FORMS": "0",
@@ -777,7 +856,7 @@ class AdminIdentityTests(TestCase):
             "teacher": "", "new_teacher": "新教授",
             "course_type": "選修",
             "module": "沒有這個模組",
-            "target_class": "沒有這班",
+            "school_class": "",
             "weekday": "1",
             "start_period": "1",
             "end_period": "2",
@@ -785,27 +864,35 @@ class AdminIdentityTests(TestCase):
             "total_quota": "20",
         })
         self.assertContains(rejected, "請選擇已建立的模組")
-        self.assertContains(rejected, "請選擇已建立的班級")
+        self.assertContains(rejected, "請選擇開課班級")
         self.client.force_login(student)
         settings_page = self.client.get(reverse("account_settings"))
         self.assertContains(settings_page, "資工四")
 
-    def test_course_form_can_create_a_class(self):
-        from timetable.models import Course, SchoolClass
+    def test_course_form_adds_teacher_room_and_class_from_the_plus_button(self):
+        from timetable.models import Course, SchoolClass, Teacher
 
         course_store.ensure_seeded()
         staff = User.objects.create_superuser("new-class-boss", "new-class@example.com", "Old-password-1")
         self.client.force_login(staff)
         form = self.client.get("/admin/timetable/course/add/")
-        self.assertContains(form, "新增班級")
+        self.assertContains(form, "/admin/timetable/teacher/add/")
+        self.assertContains(form, "/admin/timetable/classroom/add/")
+        self.assertContains(form, "/admin/timetable/schoolclass/add/")
+        self.assertNotContains(form, 'name="new_teacher"')
+        self.assertNotContains(form, 'name="new_classroom"')
+        self.assertNotContains(form, 'name="new_class"')
+        added = self.client.post("/admin/timetable/schoolclass/add/", {"name": "資工四"})
+        self.assertEqual(added.status_code, 302)
+        teacher = Teacher.objects.create(name="新教授")
+        school_class = SchoolClass.objects.get(name="資工四")
         created = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS401",
             "name": "新班級課程",
-            "teacher": "", "new_teacher": "新教授",
+            "teacher": teacher.pk,
             "course_type": "選修",
             "module": "",
-            "target_class": "",
-            "new_class": "資工四",
+            "school_class": school_class.pk,
             "weekday": "1",
             "start_period": "1",
             "end_period": "2",
@@ -813,23 +900,23 @@ class AdminIdentityTests(TestCase):
             "total_quota": "20",
         })
         self.assertEqual(created.status_code, 302)
-        self.assertTrue(SchoolClass.objects.filter(name="資工四").exists())
         self.assertEqual(Course.objects.get(pk="CS401").target_class, "資工四")
-        rejected = self.client.post("/admin/timetable/course/add/", {
+        whole_school = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS402",
-            "name": "不該用全校當新班級",
-            "teacher": "", "new_teacher": "新教授",
+            "name": "全校選修",
+            "teacher": teacher.pk,
             "course_type": "選修",
             "module": "",
-            "target_class": "",
-            "new_class": "全校",
+            "school_class": "",
+            "opens_to_all": "on",
             "weekday": "1",
-            "start_period": "1",
-            "end_period": "2",
+            "start_period": "3",
+            "end_period": "4",
             "credits": "2",
             "total_quota": "20",
         })
-        self.assertContains(rejected, "不用另外建立")
+        self.assertEqual(whole_school.status_code, 302)
+        self.assertTrue(Course.objects.get(pk="CS402").opens_to_all)
 
     def test_new_required_course_drops_a_conflicting_elective(self):
         course_store.ensure_seeded()

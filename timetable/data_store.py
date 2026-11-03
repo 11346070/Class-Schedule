@@ -391,8 +391,15 @@ class CourseDataStore:
             ).values_list("course__credits", flat=True)
         )
 
+    def _chosen_module(self, user_id: str) -> str:
+        if not user_id:
+            return ""
+        profile = StudentProfile.objects.filter(pk=user_id).only("module").first()
+        return ((profile.module if profile else "") or "").strip()
+
     def _module_limit_message(self, user_id: str, course: Course, adding: bool) -> Optional[str]:
-        if not course.module:
+        chosen = self._chosen_module(user_id)
+        if not course.module or (chosen and chosen != course.module):
             return None
         rule = ModuleCreditLimit.objects.filter(pk=course.module).first()
         if rule is None:
@@ -414,7 +421,10 @@ class CourseDataStore:
     def get_module_limit_notes(self, user_id: str) -> List[str]:
         """已選課程超出管理員後來調整的上下限時，只提示，不退選。"""
         notes = []
+        chosen = self._chosen_module(user_id)
         for rule in self.module_rules():
+            if chosen and rule.module != chosen:
+                continue
             module = rule.module
             current = self.module_credits(user_id, module)
             if rule.max_credits and current > rule.max_credits:
@@ -438,15 +448,16 @@ class CourseDataStore:
         module_totals = {
             module: self.module_credits(user_id, module) for module in rules
         } if user_id else {module: 0 for module in rules}
+        chosen = self._chosen_module(user_id)
         decisions = {}
         for course in courses:
             decisions[course.course_id] = self._eligibility_from_cache(
-                course, enrolled, total_credits, credit_limit, rules, module_totals
+                course, enrolled, total_credits, credit_limit, rules, module_totals, chosen
             )
         return decisions
 
     def _eligibility_from_cache(
-        self, course, enrolled, total_credits, credit_limit, rules, module_totals
+        self, course, enrolled, total_credits, credit_limit, rules, module_totals, chosen=""
     ) -> Tuple[bool, str]:
         if course.semester_id and not course.semester.is_current:
             return False, "這不是目前學期的課程"
@@ -461,7 +472,7 @@ class CourseDataStore:
                 False,
                 f"時間衝突：與「{existing.name}」（{existing.get_time_display()}）衝堂",
             )
-        rule = rules.get(course.module)
+        rule = None if chosen and chosen != course.module else rules.get(course.module)
         if rule is not None and rule.max_credits:
             current = module_totals.get(course.module, 0)
             after = current + course.credits
