@@ -51,11 +51,41 @@ WEEKDAY_NAMES = {
 }
 
 
+class Teacher(models.Model):
+    """授課教師。課程連結到這裡，改名後已開的課會跟著顯示新姓名。"""
+    name = models.CharField("教師姓名", max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "教師"
+        verbose_name_plural = "教師"
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+        self.name = (self.name or "").strip()
+        if not self.name:
+            raise ValidationError({"name": "請填寫教師姓名。"})
+
+    def save(self, *args, **kwargs):
+        self.name = (self.name or "").strip()
+        super().save(*args, **kwargs)
+
+
 class Course(models.Model):
     """課程"""
     course_id = models.CharField("課程編號", max_length=20, primary_key=True)
     name = models.CharField("課程名稱", max_length=100)
-    teacher = models.CharField("授課教師", max_length=50)
+    teacher = models.ForeignKey(
+        Teacher,
+        verbose_name="授課教師",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="courses",
+    )
     weekday = models.PositiveSmallIntegerField("星期")  # 1-7
     start_period = models.PositiveSmallIntegerField("開始節次")
     end_period = models.PositiveSmallIntegerField("結束節次")
@@ -96,7 +126,16 @@ class Course(models.Model):
 
     def __init__(self, *args, **kwargs):
         target_class = kwargs.pop("target_class", None)
+        teacher_name = None
+        if isinstance(kwargs.get("teacher"), str):
+            teacher_name = kwargs.pop("teacher")
         super().__init__(*args, **kwargs)
+        if teacher_name is not None:
+            label = teacher_name.strip()
+            if label:
+                self.teacher, _created = Teacher.objects.get_or_create(name=label)
+            else:
+                self.teacher = None
         if target_class is not None:
             self.target_class = target_class
 
@@ -191,7 +230,7 @@ class Course(models.Model):
         return {
             "course_id": self.course_id,
             "name": self.name,
-            "teacher": self.teacher,
+            "teacher": self.teacher.name if self.teacher_id else "",
             "weekday": self.weekday,
             "weekday_name": self.get_weekday_name(),
             "start_period": self.start_period,

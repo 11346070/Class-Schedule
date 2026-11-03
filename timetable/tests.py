@@ -246,7 +246,7 @@ class CourseDetailTests(TestCase):
             data={
                 "course_id": course.course_id,
                 "name": course.name,
-                "teacher": course.teacher,
+                "teacher": course.teacher.name,
                 "weekday": course.weekday,
                 "start_period": course.start_period,
                 "end_period": course.end_period,
@@ -710,7 +710,7 @@ class AdminIdentityTests(TestCase):
         created = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS109",
             "name": "計算機組織",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "必修",
             "module": "",
             "target_class": "資工一",
@@ -727,7 +727,7 @@ class AdminIdentityTests(TestCase):
         rejected = self.client.post("/admin/timetable/course/add/", {
             "course_id": "../secret",
             "name": "不該建立",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "123",
             "module": "",
             "target_class": "資工一",
@@ -758,7 +758,7 @@ class AdminIdentityTests(TestCase):
         rejected = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS401",
             "name": "不該建立",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "選修",
             "module": "沒有這個模組",
             "target_class": "沒有這班",
@@ -785,7 +785,7 @@ class AdminIdentityTests(TestCase):
         created = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS401",
             "name": "新班級課程",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "選修",
             "module": "",
             "target_class": "",
@@ -802,7 +802,7 @@ class AdminIdentityTests(TestCase):
         rejected = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS402",
             "name": "不該用全校當新班級",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "選修",
             "module": "",
             "target_class": "",
@@ -832,7 +832,7 @@ class AdminIdentityTests(TestCase):
         created = self.client.post("/admin/timetable/course/add/", {
             "course_id": "CS110",
             "name": "必修衝堂",
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "必修",
             "module": "",
             "target_class": "資工一",
@@ -863,7 +863,7 @@ class AdminIdentityTests(TestCase):
         staff = User.objects.create_superuser("double-boss", "double-boss@example.com", "Old-password-1")
         self.client.force_login(staff)
         course_fields = {
-            "teacher": "新教授",
+            "teacher": "", "new_teacher": "新教授",
             "course_type": "必修",
             "module": "",
             "target_class": "資工一",
@@ -923,6 +923,43 @@ class AdminIdentityTests(TestCase):
         self.assertEqual(course.school_class_id, profile.school_class_id)
         with self.assertRaises(ProtectedError):
             SchoolClass.objects.get(name="資工一甲").delete()
+
+    def test_teacher_can_be_renamed_and_overlapping_time_is_warned(self):
+        from django.db.models import ProtectedError
+
+        from timetable.models import Course, Teacher
+
+        course_store.ensure_seeded()
+        staff = User.objects.create_superuser("teacher-boss", "teacher-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        teacher = Teacher.objects.get(name="王教授")
+        renamed = self.client.post(
+            f"/admin/timetable/teacher/{teacher.pk}/change/",
+            {"name": "王老師"},
+            follow=True,
+        )
+        self.assertEqual(renamed.status_code, 200)
+        self.assertEqual(Course.objects.get(pk="CS101").teacher.name, "王老師")
+        with self.assertRaises(ProtectedError):
+            Teacher.objects.get(name="王老師").delete()
+
+        warned = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS199",
+            "name": "同時段課程",
+            "teacher": "王老師",
+            "new_teacher": "",
+            "course_type": "選修",
+            "module": "",
+            "target_class": "資工一",
+            "new_class": "",
+            "weekday": "1",
+            "start_period": "2",
+            "end_period": "3",
+            "credits": "2",
+            "total_quota": "20",
+        }, follow=True)
+        self.assertContains(warned, "\\u540c\\u4e00\\u6642\\u6bb5\\u9084\\u6709\\u5176\\u4ed6\\u8ab2\\u7a0b")
+        self.assertTrue(Course.objects.filter(pk="CS199").exists())
 
 
 class StudyRecordSyncTests(TestCase):

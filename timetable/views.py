@@ -294,7 +294,7 @@ def index(request):
                 {
                     'course_id': course.course_id,
                     'name': course.name,
-                    'teacher': course.teacher,
+                    'teacher': course.teacher.name if course.teacher_id else "",
                     'weekday': course.weekday,
                     'start_period': course.start_period,
                     'end_period': course.end_period,
