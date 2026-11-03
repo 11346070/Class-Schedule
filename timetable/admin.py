@@ -23,6 +23,7 @@ from .models import (
     ModuleCreditLimit,
     Classroom,
     SchoolClass,
+    Semester,
     StudentProfile,
     Teacher,
     StudyRecord,
@@ -304,6 +305,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         "course_id",
         "name",
+        "semester",
         "teacher",
         "course_type",
         "module",
@@ -317,13 +319,13 @@ class CourseAdmin(admin.ModelAdmin):
         "classroom",
         "has_syllabus",
     )
-    list_filter = ("course_type", "module", "weekday", "school_class", "opens_to_all")
+    list_filter = ("semester", "course_type", "module", "weekday", "school_class", "opens_to_all")
     search_fields = ("course_id", "name", "teacher__name", "school_class__name")
-    list_select_related = ("school_class", "teacher", "classroom")
+    list_select_related = ("school_class", "teacher", "classroom", "semester")
     ordering = ("course_id",)
     list_per_page = 25
     fieldsets = (
-        (None, {"fields": ("course_id", "name", "teacher", "new_teacher", "classroom", "new_classroom", "course_type", "module", "target_class", "new_class")}),
+        (None, {"fields": ("course_id", "name", "semester", "teacher", "new_teacher", "classroom", "new_classroom", "course_type", "module", "target_class", "new_class")}),
         ("時間與學分", {"fields": ("weekday", "start_period", "end_period", "credits")}),
         ("名額", {"fields": ("total_quota", "enrolled_count")}),
         ("課程大綱", {"fields": ("syllabus",)}),
@@ -503,6 +505,20 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
         "recognition_cap",
     )
     list_per_page = 25
+
+
+@admin.register(Semester)
+class SemesterAdmin(admin.ModelAdmin):
+    list_display = ("code", "name", "is_current")
+    search_fields = ("code", "name")
+    ordering = ("-is_current", "code")
+    list_per_page = 25
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["code"].help_text = "例如 114-1。可以修改代碼，已開課程會跟著這個學期。"
+        form.base_fields["is_current"].help_text = "學生的課表和選課清單只顯示目前學期。同一時間只保留一個。"
+        return form
 
 
 @admin.register(Classroom)

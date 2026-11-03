@@ -1046,6 +1046,32 @@ class AdminIdentityTests(TestCase):
         self.assertContains(detail, "週一 第3-4節")
         self.assertContains(detail, "週二 第6-8節")
 
+    def test_another_semester_stays_out_of_the_current_list(self):
+        from timetable.models import Course, Semester
+
+        course_store.ensure_seeded()
+        past = Semester.objects.create(code="113-1", name="113 學年上學期")
+        past_course = Course.objects.get(pk="GE101")
+        past_course.semester = past
+        past_course.save(update_fields=["semester"])
+        student = User.objects.create_user(username="term-student", password="Old-password-1")
+        self.client.force_login(student)
+        listing = self.client.get(reverse("course_list"), {"keyword": "GE101"})
+        self.assertNotContains(listing, "中國文學欣賞")
+        blocked, message = course_store.enroll_course(str(student.pk), "GE101")
+        self.assertFalse(blocked)
+        self.assertIn("目前學期", message)
+        detail = self.client.get(reverse("course_detail", args=["GE101"]))
+        self.assertContains(detail, "113 學年上學期")
+
+        current = Semester.objects.get(is_current=True)
+        current.code = "114-1"
+        current.name = "114 學年上學期"
+        current.save()
+        self.assertEqual(Course.objects.get(pk="CS101").semester.code, "114-1")
+        current_detail = self.client.get(reverse("course_detail", args=["CS101"]))
+        self.assertContains(current_detail, "114 學年上學期")
+
 
 class StudyRecordSyncTests(TestCase):
     def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):

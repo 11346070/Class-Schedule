@@ -51,6 +51,35 @@ WEEKDAY_NAMES = {
 }
 
 
+class Semester(models.Model):
+    """開課學期。同一時間只會有一個目前學期。"""
+    code = models.CharField("學期代碼", max_length=20, unique=True)
+    name = models.CharField("學期名稱", max_length=50, blank=True, default="")
+    is_current = models.BooleanField("目前學期", default=False)
+
+    class Meta:
+        ordering = ["-is_current", "code"]
+        verbose_name = "學期"
+        verbose_name_plural = "學期"
+
+    def __str__(self):
+        return self.name or self.code
+
+    def clean(self):
+        super().clean()
+        self.code = (self.code or "").strip()
+        self.name = (self.name or "").strip()
+        if not self.code:
+            raise ValidationError({"code": "請填寫學期代碼。"})
+
+    def save(self, *args, **kwargs):
+        self.code = (self.code or "").strip()
+        self.name = (self.name or "").strip()
+        super().save(*args, **kwargs)
+        if self.is_current:
+            Semester.objects.exclude(pk=self.pk).update(is_current=False)
+
+
 class Classroom(models.Model):
     """上課地點。課程連結到這裡，改名後已開的課會跟著顯示新名稱。"""
     name = models.CharField("教室名稱", max_length=50, unique=True)
@@ -130,6 +159,14 @@ class Course(models.Model):
         related_name="courses",
     )
     opens_to_all = models.BooleanField("開放全校", default=False)
+    semester = models.ForeignKey(
+        Semester,
+        verbose_name="學期",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="courses",
+    )
     classroom = models.ForeignKey(
         Classroom,
         verbose_name="教室",
@@ -178,6 +215,7 @@ class Course(models.Model):
                 self.teacher = None
         if target_class is not None:
             self.target_class = target_class
+        self._ensure_semester()
 
     def _get_target_class(self):
         if self.opens_to_all:
@@ -253,11 +291,23 @@ class Course(models.Model):
         if errors:
             raise ValidationError(errors)
 
+    def _ensure_semester(self):
+        if self.semester_id:
+            return
+        current = Semester.objects.filter(is_current=True).first()
+        if current is None:
+            current, _created = Semester.objects.get_or_create(
+                code="本學期",
+                defaults={"name": "本學期", "is_current": True},
+            )
+        self.semester = current
+
     def save(self, *args, **kwargs):
         self.course_type = (self.course_type or "").strip()
         self.module = (self.module or "").strip()
         if self.course_id:
             self.course_id = self.course_id.strip()
+        self._ensure_semester()
         super().save(*args, **kwargs)
 
     def get_weekday_name(self) -> str:
@@ -315,6 +365,7 @@ class Course(models.Model):
             "course_type": self.course_type,
             "module": self.module,
             "target_class": self.target_class,
+            "semester": (self.semester.name or self.semester.code) if self.semester_id else "",
             "classroom": self.classroom.name if self.classroom_id else "",
             "total_quota": self.total_quota,
             "enrolled_count": self.enrolled_count,

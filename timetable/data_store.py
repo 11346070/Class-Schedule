@@ -22,6 +22,7 @@ from .models import (
     GraduationRequirement,
     ModuleCreditLimit,
     SchoolClass,
+    Semester,
     StudentProfile,
     StudyRecord,
     UserCreditLimit,
@@ -158,19 +159,36 @@ class CourseDataStore:
     def get_course(self, course_id: str) -> Optional[Course]:
         self.ensure_seeded()
         try:
-            return Course.objects.select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom").get(pk=course_id)
+            return Course.objects.select_related(
+                "school_class", "teacher", "classroom", "semester"
+            ).prefetch_related("extra_meetings__classroom").get(pk=course_id)
         except Course.DoesNotExist:
             return None
 
+    def current_semester(self):
+        return Semester.objects.filter(is_current=True).first()
+
+    def current_semester_label(self) -> str:
+        semester = self.current_semester()
+        if semester is None:
+            return "本學期"
+        return semester.name or semester.code
+
+    def _limit_to_current(self, qs):
+        semester = self.current_semester()
+        if semester is None:
+            return qs
+        return qs.filter(semester=semester)
+
     def get_all_courses(self) -> List[Course]:
         self.ensure_seeded()
-        return list(Course.objects.all())
+        return list(self._limit_to_current(Course.objects.all()))
 
     def search_courses(
         self, keyword: str = "", course_type: str = "", weekday: int = 0
     ) -> List[Course]:
         self.ensure_seeded()
-        qs = Course.objects.all()
+        qs = self._limit_to_current(Course.objects.all())
 
         if keyword:
             qs = qs.filter(
@@ -185,15 +203,16 @@ class CourseDataStore:
         if weekday > 0:
             qs = qs.filter(Q(weekday=weekday) | Q(extra_meetings__weekday=weekday)).distinct()
 
-        return list(qs.select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom"))
+        return list(qs.select_related("school_class", "teacher", "classroom", "semester").prefetch_related("extra_meetings__classroom"))
 
     def get_user_enrollments(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
         if user_id:
             self.assign_required_courses(user_id)
         courses = list(
-            Course.objects.filter(enrollments__user_id=user_id)
-            .select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom")
+            self._limit_to_current(Course.objects.filter(enrollments__user_id=user_id))
+            .select_related("school_class", "teacher", "classroom", "semester")
+            .prefetch_related("extra_meetings__classroom")
             .order_by("weekday", "start_period")
         )
         locked = self.locked_required_ids(user_id) if user_id else set()
@@ -214,9 +233,10 @@ class CourseDataStore:
             return []
         self.ensure_seeded()
         return list(
-            Course.objects.filter(course_type=COURSE_TYPE_REQUIRED)
+            self._limit_to_current(Course.objects.filter(course_type=COURSE_TYPE_REQUIRED))
             .filter(Q(opens_to_all=True) | Q(school_class__name=class_name))
-            .select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom")
+            .select_related("school_class", "teacher", "classroom", "semester")
+            .prefetch_related("extra_meetings__classroom")
         )
 
     def locked_required_ids(self, user_id: str) -> set:
@@ -428,6 +448,8 @@ class CourseDataStore:
     def _eligibility_from_cache(
         self, course, enrolled, total_credits, credit_limit, rules, module_totals
     ) -> Tuple[bool, str]:
+        if course.semester_id and not course.semester.is_current:
+            return False, "這不是目前學期的課程"
         if any(existing.course_id == course.course_id for existing in enrolled):
             return False, "您已經選過這門課程"
         if course.is_full:
@@ -472,9 +494,14 @@ class CourseDataStore:
         with self.lock:
             with transaction.atomic():
                 try:
-                    course = Course.objects.select_for_update().get(pk=course_id)
+                    course = (
+                        Course.objects.select_for_update().select_related("semester").get(pk=course_id)
+                    )
                 except Course.DoesNotExist:
                     return False, "課程不存在"
+
+                if course.semester_id and not course.semester.is_current:
+                    return False, "這不是目前學期的課程"
 
                 if Enrollment.objects.filter(
                     user_id=user_id, course=course

@@ -17,6 +17,10 @@
                 <td>{{ course.course_id }}</td>
             </tr>
             <tr>
+                <th>學期</th>
+                <td>{{ course.semester|default:"未指定" }}</td>
+            </tr>
+            <tr>
                 <th>課程名稱</th>
                 <td>{{ course.name }}</td>
             </tr>

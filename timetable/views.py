@@ -306,7 +306,7 @@ def index(request):
         'export_payload': {
             'username': request.user.username,
             'display_name': request.user.get_full_name() or request.user.username,
-            'semester': '本學期',
+            'semester': course_store.current_semester_label(),
             'periods': [
                 {'period': period, 'time': PERIOD_TIMES.get(period, '')}
                 for period in range(1, 14)
