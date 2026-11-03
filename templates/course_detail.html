@@ -29,6 +29,10 @@
                 <td>{{ course.time_display }}</td>
             </tr>
             <tr>
+                <th>教室</th>
+                <td>{{ course.classroom|default:"尚未安排" }}</td>
+            </tr>
+            <tr>
                 <th>學分</th>
                 <td>{{ course.credits }}</td>
             </tr>

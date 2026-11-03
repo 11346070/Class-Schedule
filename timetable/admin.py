@@ -20,6 +20,7 @@ from .models import (
     Favorite,
     GraduationRequirement,
     ModuleCreditLimit,
+    Classroom,
     SchoolClass,
     StudentProfile,
     Teacher,
@@ -121,6 +122,13 @@ class CourseAdminForm(forms.ModelForm):
         required=False,
         help_text="下拉選單沒有這位老師時，直接輸入姓名。儲存這門課後就會建立。",
     )
+    classroom = forms.ChoiceField(label="教室", required=False)
+    new_classroom = forms.CharField(
+        label="新增教室",
+        max_length=50,
+        required=False,
+        help_text="下拉選單沒有這間教室時，直接輸入名稱。可以留空。",
+    )
     target_class = forms.ChoiceField(label="開課班級", required=False)
     new_class = forms.CharField(
         label="新增班級",
@@ -153,6 +161,16 @@ class CourseAdminForm(forms.ModelForm):
         if not self.is_bound:
             self.initial["teacher"] = current_teacher
 
+        room_names = [("", "尚未安排教室")]
+        for name in Classroom.objects.order_by("name").values_list("name", flat=True):
+            room_names.append((name, name))
+        current_room = self.instance.classroom.name if self.instance.classroom_id else ""
+        if current_room and current_room not in {value for value, _label in room_names}:
+            room_names.append((current_room, current_room))
+        self.fields["classroom"].choices = room_names
+        if not self.is_bound:
+            self.initial["classroom"] = current_room
+
         class_names = [("", "請選擇開課班級")]
         for name in course_store.class_names():
             class_names.append((name, name))
@@ -184,6 +202,15 @@ class CourseAdminForm(forms.ModelForm):
             raise ValidationError("請選擇已建立的教師，或在新增教師填姓名。")
         return value
 
+    def clean_classroom(self):
+        value = (self.cleaned_data.get("classroom") or "").strip()
+        if (self.data.get("new_classroom") or "").strip() or not value:
+            return value
+        allowed = {choice for choice, _label in self.fields["classroom"].choices if choice}
+        if value not in allowed:
+            raise ValidationError("請選擇已建立的教室，或在新增教室填名稱。")
+        return value
+
     def clean_target_class(self):
         value = (self.cleaned_data.get("target_class") or "").strip()
         if (self.data.get("new_class") or "").strip():
@@ -201,6 +228,13 @@ class CourseAdminForm(forms.ModelForm):
         self.instance.opens_to_all = False
         self.instance.school_class, _created = SchoolClass.objects.get_or_create(name=label)
 
+    def _assign_classroom(self, label):
+        if not label:
+            self.instance.classroom = None
+            return None
+        self.instance.classroom, _created = Classroom.objects.get_or_create(name=label)
+        return self.instance.classroom
+
     def _assign_teacher(self, label):
         self.instance.teacher, _created = Teacher.objects.get_or_create(name=label)
         return self.instance.teacher
@@ -217,6 +251,13 @@ class CourseAdminForm(forms.ModelForm):
                 self.add_error("teacher", "請選擇已建立的教師，或在新增教師填姓名。")
         else:
             cleaned["teacher"] = self._assign_teacher(teacher_name)
+        new_room = (cleaned.get("new_classroom") or "").strip()
+        raw_room = cleaned.get("classroom") or ""
+        if isinstance(raw_room, Classroom):
+            raw_room = raw_room.name
+        room_name = new_room or str(raw_room).strip()
+        if "classroom" not in self.errors:
+            cleaned["classroom"] = self._assign_classroom(room_name)
         new_name = (cleaned.get("new_class") or "").strip()
         if not new_name:
             label = (cleaned.get("target_class") or "").strip()
@@ -263,15 +304,16 @@ class CourseAdmin(admin.ModelAdmin):
         "enrolled_count",
         "total_quota",
         "target_class",
+        "classroom",
         "has_syllabus",
     )
     list_filter = ("course_type", "module", "weekday", "school_class", "opens_to_all")
     search_fields = ("course_id", "name", "teacher__name", "school_class__name")
-    list_select_related = ("school_class", "teacher")
+    list_select_related = ("school_class", "teacher", "classroom")
     ordering = ("course_id",)
     list_per_page = 25
     fieldsets = (
-        (None, {"fields": ("course_id", "name", "teacher", "new_teacher", "course_type", "module", "target_class", "new_class")}),
+        (None, {"fields": ("course_id", "name", "teacher", "new_teacher", "classroom", "new_classroom", "course_type", "module", "target_class", "new_class")}),
         ("時間與學分", {"fields": ("weekday", "start_period", "end_period", "credits")}),
         ("名額", {"fields": ("total_quota", "enrolled_count")}),
         ("課程大綱", {"fields": ("syllabus",)}),
@@ -445,6 +487,21 @@ class GraduationRequirementAdmin(admin.ModelAdmin):
         "recognition_cap",
     )
     list_per_page = 25
+
+
+@admin.register(Classroom)
+class ClassroomAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+    ordering = ("name",)
+    list_per_page = 25
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["name"].help_text = (
+            "可以修改名稱。已經指定這間教室的課程會顯示新名稱。有課程使用時不能刪除。"
+        )
+        return form
 
 
 @admin.register(Teacher)

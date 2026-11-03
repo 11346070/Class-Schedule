@@ -51,6 +51,29 @@ WEEKDAY_NAMES = {
 }
 
 
+class Classroom(models.Model):
+    """上課地點。課程連結到這裡，改名後已開的課會跟著顯示新名稱。"""
+    name = models.CharField("教室名稱", max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "教室"
+        verbose_name_plural = "教室"
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        super().clean()
+        self.name = (self.name or "").strip()
+        if not self.name:
+            raise ValidationError({"name": "請填寫教室名稱。"})
+
+    def save(self, *args, **kwargs):
+        self.name = (self.name or "").strip()
+        super().save(*args, **kwargs)
+
+
 class Teacher(models.Model):
     """授課教師。課程連結到這裡，改名後已開的課會跟著顯示新姓名。"""
     name = models.CharField("教師姓名", max_length=50, unique=True)
@@ -107,6 +130,14 @@ class Course(models.Model):
         related_name="courses",
     )
     opens_to_all = models.BooleanField("開放全校", default=False)
+    classroom = models.ForeignKey(
+        Classroom,
+        verbose_name="教室",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="courses",
+    )
     total_quota = models.PositiveIntegerField("總名額")
     enrolled_count = models.PositiveIntegerField("已選人數", default=0)
 
@@ -127,9 +158,18 @@ class Course(models.Model):
     def __init__(self, *args, **kwargs):
         target_class = kwargs.pop("target_class", None)
         teacher_name = None
+        classroom_name = None
         if isinstance(kwargs.get("teacher"), str):
             teacher_name = kwargs.pop("teacher")
+        if isinstance(kwargs.get("classroom"), str):
+            classroom_name = kwargs.pop("classroom")
         super().__init__(*args, **kwargs)
+        if classroom_name is not None:
+            label = classroom_name.strip()
+            if label:
+                self.classroom, _created = Classroom.objects.get_or_create(name=label)
+            else:
+                self.classroom = None
         if teacher_name is not None:
             label = teacher_name.strip()
             if label:
@@ -240,6 +280,7 @@ class Course(models.Model):
             "course_type": self.course_type,
             "module": self.module,
             "target_class": self.target_class,
+            "classroom": self.classroom.name if self.classroom_id else "",
             "total_quota": self.total_quota,
             "enrolled_count": self.enrolled_count,
             "remaining_quota": self.remaining_quota,

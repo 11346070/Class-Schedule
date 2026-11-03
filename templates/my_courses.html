@@ -27,6 +27,7 @@
                     <th>課程名稱</th>
                     <th>授課教師</th>
                     <th>上課時間</th>
+                    <th>教室</th>
                     <th>學分</th>
                     <th>類型</th>
                     <th>開課班級</th>
@@ -40,6 +41,7 @@
                     <td><strong>{{ course.name }}</strong></td>
                     <td>{{ course.teacher }}</td>
                     <td>{{ course.time_display }}</td>
+                    <td>{{ course.classroom|default:"尚未安排" }}</td>
                     <td>{{ course.credits }}</td>
                     <td><span class="course-type-badge badge-{{ course.course_type }}">{{ course.course_type }}</span></td>
                     <td>{{ course.target_class }}</td>

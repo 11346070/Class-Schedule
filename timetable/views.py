@@ -301,6 +301,7 @@ def index(request):
                     'credits': course.credits,
                     'course_type': course.course_type,
                     'target_class': course.target_class,
+                    'classroom': course.classroom.name if course.classroom_id else "",
                 }
                 for course in enrolled_courses
             ],

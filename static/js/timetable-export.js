@@ -52,6 +52,7 @@
             course.name,
             course.teacher || "",
             course.start_period + "–" + course.end_period + "節 · " + course.credits + "學分",
+            course.classroom ? "教室 " + course.classroom : "",
             course.target_class ? "班級 " + course.target_class : ""
         ].filter(Boolean);
     }
@@ -121,7 +122,7 @@
             escapeHtml(data.semester) + '</p></header><table><thead><tr><th>節次</th>' +
             data.weekdays.map(function (name) { return '<th>' + escapeHtml(name) + '</th>'; }).join('') +
             '</tr></thead><tbody>' + body + '</tbody></table>' +
-            '<p class="hint">開課班級會一併列出。系統目前沒有獨立的教室欄位。</p>' +
+            '<p class="hint">開課班級與教室會一併列出。尚未安排教室的課程不會顯示地點。</p>' +
             '<p class="no-print">請在列印對話框選擇「儲存為 PDF」。</p>' +
             '<script>window.addEventListener("load",function(){window.print();});<\/script></body></html>';
 
@@ -250,7 +251,7 @@
         ctx.textAlign = "left";
         ctx.fillStyle = "#6b7280";
         ctx.font = "13px 'Microsoft JhengHei', sans-serif";
-        ctx.fillText("開課班級會一併列出。系統目前沒有獨立的教室欄位。", pad, height - 28);
+        ctx.fillText("開課班級與教室會一併列出。尚未安排教室的課程不會顯示地點。", pad, height - 28);
 
         var link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");

@@ -961,6 +961,51 @@ class AdminIdentityTests(TestCase):
         self.assertContains(warned, "\\u540c\\u4e00\\u6642\\u6bb5\\u9084\\u6709\\u5176\\u4ed6\\u8ab2\\u7a0b")
         self.assertTrue(Course.objects.filter(pk="CS199").exists())
 
+    def test_classroom_can_be_renamed_and_is_shown_on_the_course(self):
+        from django.db.models import ProtectedError
+
+        from timetable.models import Classroom, Course
+
+        course_store.ensure_seeded()
+        staff = User.objects.create_superuser("room-boss", "room-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        created = self.client.post("/admin/timetable/course/CS101/change/", {
+            "course_id": "CS101",
+            "name": "程式設計(一)",
+            "teacher": "王教授",
+            "new_teacher": "",
+            "classroom": "",
+            "new_classroom": "E301",
+            "course_type": "必修",
+            "module": "",
+            "target_class": "資工一",
+            "new_class": "",
+            "weekday": "1",
+            "start_period": "2",
+            "end_period": "4",
+            "credits": "3",
+            "total_quota": "60",
+        })
+        self.assertEqual(created.status_code, 302, created.content.decode()[:400] if created.status_code != 302 else "")
+        course = Course.objects.get(pk="CS101")
+        self.assertEqual(course.classroom.name, "E301")
+        room = Classroom.objects.get(name="E301")
+        renamed = self.client.post(
+            f"/admin/timetable/classroom/{room.pk}/change/",
+            {"name": "資工館301"},
+            follow=True,
+        )
+        self.assertEqual(renamed.status_code, 200)
+        course.refresh_from_db()
+        self.assertEqual(course.classroom.name, "資工館301")
+        with self.assertRaises(ProtectedError):
+            room.delete()
+        self.client.logout()
+        student = User.objects.create_user(username="room-student", password="Old-password-1")
+        self.client.force_login(student)
+        detail = self.client.get(reverse("course_detail", args=["CS101"]))
+        self.assertContains(detail, "資工館301")
+
 
 class StudyRecordSyncTests(TestCase):
     def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):

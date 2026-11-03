@@ -158,7 +158,7 @@ class CourseDataStore:
     def get_course(self, course_id: str) -> Optional[Course]:
         self.ensure_seeded()
         try:
-            return Course.objects.select_related("school_class", "teacher").get(pk=course_id)
+            return Course.objects.select_related("school_class", "teacher", "classroom").get(pk=course_id)
         except Course.DoesNotExist:
             return None
 
@@ -185,7 +185,7 @@ class CourseDataStore:
         if weekday > 0:
             qs = qs.filter(weekday=weekday)
 
-        return list(qs.select_related("school_class", "teacher"))
+        return list(qs.select_related("school_class", "teacher", "classroom"))
 
     def get_user_enrollments(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
@@ -193,7 +193,7 @@ class CourseDataStore:
             self.assign_required_courses(user_id)
         courses = list(
             Course.objects.filter(enrollments__user_id=user_id)
-            .select_related("school_class", "teacher")
+            .select_related("school_class", "teacher", "classroom")
             .order_by("weekday", "start_period")
         )
         locked = self.locked_required_ids(user_id) if user_id else set()
@@ -216,7 +216,7 @@ class CourseDataStore:
         return list(
             Course.objects.filter(course_type=COURSE_TYPE_REQUIRED)
             .filter(Q(opens_to_all=True) | Q(school_class__name=class_name))
-            .select_related("school_class", "teacher")
+            .select_related("school_class", "teacher", "classroom")
         )
 
     def locked_required_ids(self, user_id: str) -> set:

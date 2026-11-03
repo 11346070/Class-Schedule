@@ -120,7 +120,7 @@
                             <div class="course-block type-{{ item.course.course_type }}{% if item.count > 1 %} is-shared{% endif %}" style="height: calc({{ item.rowspan }} * 60px);{% if item.count > 1 %} width: calc((100% - 8px) / {{ item.count }}); left: calc(4px + {{ item.lane }} * (100% - 8px) / {{ item.count }});{% endif %}">
                                 <div class="course-name">{{ item.course.name }}</div>
                                 <div class="course-info">{{ item.course.teacher }}</div>
-                                <div class="course-info">{{ item.course.start_period }}-{{ item.course.end_period }}節</div>
+                                <div class="course-info">{{ item.course.start_period }}-{{ item.course.end_period }}節{% if item.course.classroom %} · {{ item.course.classroom }}{% endif %}</div>
                             </div>
                             {% endfor %}
                         {% endif %}
@@ -153,6 +153,7 @@
                 <p><strong>課程編號：</strong>{{ course.course_id }}</p>
                 <p><strong>授課教師：</strong>{{ course.teacher }}</p>
                 <p><strong>上課時間：</strong>{{ course.get_time_display }}</p>
+                <p><strong>教室：</strong>{{ course.classroom|default:"尚未安排" }}</p>
                 <p><strong>學分：</strong>{{ course.credits }}</p>
             </div>
             <div class="course-card-footer">
