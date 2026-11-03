@@ -68,7 +68,15 @@ class Course(models.Model):
     )
     module = models.CharField("所屬模組", max_length=20, blank=True, default="")
     syllabus = models.FileField("課程大綱 PDF", upload_to=syllabus_upload_to, blank=True)
-    target_class = models.CharField("開課班級", max_length=50)
+    school_class = models.ForeignKey(
+        "SchoolClass",
+        verbose_name="開課班級",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="courses",
+    )
+    opens_to_all = models.BooleanField("開放全校", default=False)
     total_quota = models.PositiveIntegerField("總名額")
     enrolled_count = models.PositiveIntegerField("已選人數", default=0)
 
@@ -86,13 +94,45 @@ class Course(models.Model):
     def is_full(self) -> bool:
         return self.enrolled_count >= self.total_quota
 
+    def __init__(self, *args, **kwargs):
+        target_class = kwargs.pop("target_class", None)
+        super().__init__(*args, **kwargs)
+        if target_class is not None:
+            self.target_class = target_class
+
+    def _get_target_class(self):
+        if self.opens_to_all:
+            return "全校"
+        if self.school_class_id:
+            return self.school_class.name
+        return ""
+
+    _get_target_class.short_description = "開課班級"
+
+    def _set_target_class(self, value):
+        label = (value or "").strip()
+        if label == "全校":
+            self.opens_to_all = True
+            self.school_class = None
+            return
+        self.opens_to_all = False
+        if not label:
+            self.school_class = None
+            return
+        if self.school_class_id and self.school_class.name == label:
+            return
+        self.school_class, _created = SchoolClass.objects.get_or_create(name=label)
+
+    target_class = property(_get_target_class, _set_target_class)
+
     def clean(self):
         """後台維護課程時，檢查星期、節次、學分與名額是否合理。"""
         super().clean()
         errors = {}
         self.course_type = (self.course_type or "").strip()
-        self.target_class = (self.target_class or "").strip()
         self.course_id = (self.course_id or "").strip()
+        if self.opens_to_all and self.school_class_id:
+            errors["school_class"] = "全校課程不用再指定班級。"
 
         if self.course_id and COURSE_ID_PATTERN.fullmatch(self.course_id) is None:
             errors["course_id"] = "課程編號只能使用英數、底線或連字號。"
@@ -136,7 +176,6 @@ class Course(models.Model):
 
     def save(self, *args, **kwargs):
         self.course_type = (self.course_type or "").strip()
-        self.target_class = (self.target_class or "").strip()
         self.module = (self.module or "").strip()
         if self.course_id:
             self.course_id = self.course_id.strip()
@@ -285,7 +324,7 @@ class CourseReview(models.Model):
 
 class SchoolClass(models.Model):
     """學生可選、課程可開課的班級。全校不是班級，只用於課程。"""
-    name = models.CharField("班級名稱", max_length=50, primary_key=True)
+    name = models.CharField("班級名稱", max_length=50, unique=True)
 
     class Meta:
         ordering = ["name"]
@@ -314,7 +353,14 @@ class StudentProfile(models.Model):
     student_number = models.CharField(
         "學號", max_length=12, blank=True, null=True, unique=True
     )
-    class_name = models.CharField("班級", max_length=50, blank=True, default="")
+    school_class = models.ForeignKey(
+        SchoolClass,
+        verbose_name="班級",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="students",
+    )
     module = models.CharField("主修模組", max_length=20, blank=True, default="")
     schedule_note = models.TextField("課表提醒", blank=True, default="")
     notify_at_floor = models.BooleanField("已達退選下限時提醒", default=True)
@@ -326,13 +372,36 @@ class StudentProfile(models.Model):
         verbose_name = "學生資料"
         verbose_name_plural = "學生資料"
 
+    def __init__(self, *args, **kwargs):
+        class_name = kwargs.pop("class_name", None)
+        super().__init__(*args, **kwargs)
+        if class_name is not None:
+            self.class_name = class_name
+
+    def _get_class_name(self):
+        if self.school_class_id:
+            return self.school_class.name
+        return ""
+
+    _get_class_name.short_description = "班級"
+
+    def _set_class_name(self, value):
+        label = (value or "").strip()
+        if not label:
+            self.school_class = None
+            return
+        if self.school_class_id and self.school_class.name == label:
+            return
+        self.school_class, _created = SchoolClass.objects.get_or_create(name=label)
+
+    class_name = property(_get_class_name, _set_class_name)
+
     def __str__(self):
         return f"{self.student_number or self.user_id}: {self.class_name or '未填班級'}"
 
     def save(self, *args, **kwargs):
         number = (self.student_number or "").strip().upper()
         self.student_number = number or None
-        self.class_name = (self.class_name or "").strip()
         super().save(*args, **kwargs)
 
 

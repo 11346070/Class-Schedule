@@ -894,6 +894,36 @@ class AdminIdentityTests(TestCase):
         self.assertContains(home, "is-shared")
         self.assertContains(home, "上課時間重疊")
 
+    def test_renaming_a_class_keeps_courses_and_students(self):
+        from django.db.models import ProtectedError
+
+        from timetable.models import Course, SchoolClass
+
+        course_store.ensure_seeded()
+        student = User.objects.create_user(username="rename-student", password="Old-password-1")
+        profile = StudentProfile.objects.create(
+            user_id=str(student.pk),
+            class_name="資工一",
+            student_number="A44444",
+        )
+        staff = User.objects.create_superuser("rename-boss", "rename-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        school_class = SchoolClass.objects.get(name="資工一")
+        renamed = self.client.post(
+            f"/admin/timetable/schoolclass/{school_class.pk}/change/",
+            {"name": "資工一甲"},
+            follow=True,
+        )
+        self.assertEqual(renamed.status_code, 200)
+        self.assertFalse(SchoolClass.objects.filter(name="資工一").exists())
+        course = Course.objects.get(pk="CS101")
+        profile.refresh_from_db()
+        self.assertEqual(course.target_class, "資工一甲")
+        self.assertEqual(profile.class_name, "資工一甲")
+        self.assertEqual(course.school_class_id, profile.school_class_id)
+        with self.assertRaises(ProtectedError):
+            SchoolClass.objects.get(name="資工一甲").delete()
+
 
 class StudyRecordSyncTests(TestCase):
     def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):

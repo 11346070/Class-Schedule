@@ -113,6 +113,7 @@ class TimetableUserAdmin(DjangoUserAdmin):
 
 
 class CourseAdminForm(forms.ModelForm):
+    target_class = forms.ChoiceField(label="開課班級", required=False)
     new_class = forms.CharField(
         label="新增班級",
         max_length=50,
@@ -122,7 +123,7 @@ class CourseAdminForm(forms.ModelForm):
 
     class Meta:
         model = Course
-        fields = "__all__"
+        exclude = ("school_class", "opens_to_all")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -140,11 +141,13 @@ class CourseAdminForm(forms.ModelForm):
         current = (getattr(self.instance, "target_class", "") or "").strip()
         if current and current not in {value for value, _label in class_names}:
             class_names.append((current, current))
-        self.fields["target_class"].widget = forms.Select(choices=class_names)
+        self.fields["target_class"].choices = class_names
         self.fields["target_class"].required = False
         self.fields["target_class"].help_text = (
             "從清單選擇，或在下面的「新增班級」直接輸入。全校代表每個已填班級的學生都會遇到這門必修。"
         )
+        if not self.is_bound:
+            self.initial["target_class"] = current
 
     def clean_module(self):
         value = (self.cleaned_data.get("module") or "").strip()
@@ -157,22 +160,33 @@ class CourseAdminForm(forms.ModelForm):
         value = (self.cleaned_data.get("target_class") or "").strip()
         if (self.data.get("new_class") or "").strip():
             return value
-        allowed = {choice for choice, _label in self.fields["target_class"].widget.choices if choice}
+        allowed = {choice for choice, _label in self.fields["target_class"].choices if choice}
         if value not in allowed:
             raise ValidationError("請選擇已建立的班級，或在新增班級填名稱。")
         return value
+
+    def _assign_target_class(self, label):
+        if label == "全校":
+            self.instance.opens_to_all = True
+            self.instance.school_class = None
+            return
+        self.instance.opens_to_all = False
+        self.instance.school_class, _created = SchoolClass.objects.get_or_create(name=label)
 
     def clean(self):
         cleaned = super().clean()
         new_name = (cleaned.get("new_class") or "").strip()
         if not new_name:
-            if not (cleaned.get("target_class") or "").strip():
+            label = (cleaned.get("target_class") or "").strip()
+            if not label:
                 self.add_error("target_class", "請選擇已建立的班級，或在新增班級填名稱。")
+                return cleaned
+            self._assign_target_class(label)
             return cleaned
         if new_name == "全校":
             self.add_error("new_class", "「全校」不用另外建立，直接在開課班級選擇全校。")
             return cleaned
-        SchoolClass.objects.get_or_create(name=new_name)
+        self._assign_target_class(new_name)
         cleaned["target_class"] = new_name
         return cleaned
 
@@ -209,8 +223,9 @@ class CourseAdmin(admin.ModelAdmin):
         "target_class",
         "has_syllabus",
     )
-    list_filter = ("course_type", "module", "weekday", "target_class")
-    search_fields = ("course_id", "name", "teacher", "target_class")
+    list_filter = ("course_type", "module", "weekday", "school_class", "opens_to_all")
+    search_fields = ("course_id", "name", "teacher", "school_class__name")
+    list_select_related = ("school_class",)
     ordering = ("course_id",)
     list_per_page = 25
     fieldsets = (
@@ -231,13 +246,14 @@ class CourseAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        target = (obj.target_class or "").strip()
-        if (obj.course_type or "").strip() != "必修" or not target:
+        if (obj.course_type or "").strip() != "必修":
+            return
+        if not obj.opens_to_all and not obj.school_class_id:
             return
         user_ids = [
             profile.user_id
-            for profile in StudentProfile.objects.exclude(class_name="")
-            if target == "全校" or (profile.class_name or "").strip() == target
+            for profile in StudentProfile.objects.exclude(school_class__isnull=True)
+            if obj.opens_to_all or profile.school_class_id == obj.school_class_id
         ]
         added_students = 0
         displaced = []
@@ -381,15 +397,11 @@ class SchoolClassAdmin(admin.ModelAdmin):
     ordering = ("name",)
     list_per_page = 25
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ("name",)
-        return ()
-
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
         form.base_fields["name"].help_text = (
-            "新增後會出現在課程的開課班級，以及學生的班級選單。不用建立「全校」。"
+            "可以修改名稱。已經指定這個班級的課程和學生會顯示新名稱。"
+            "有課程或學生使用時不能刪除。不用建立「全校」。"
         )
         return form
 
@@ -440,8 +452,9 @@ class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
         "module",
         "has_avatar",
     )
-    search_fields = ("user_id", "module", "student_number", "class_name")
-    list_filter = ("class_name", "module")
+    search_fields = ("user_id", "module", "student_number", "school_class__name")
+    list_filter = ("school_class", "module")
+    list_select_related = ("school_class",)
     list_per_page = 25
     readonly_fields = ("user_id",)
     fields = ("user_id", "name", "student_number", "class_name", "module", "avatar")
@@ -450,7 +463,7 @@ class StudentProfileAdmin(UserIdentityMixin, admin.ModelAdmin):
     def student_number_display(self, obj):
         return obj.student_number or "—"
 
-    @admin.display(description="班級", ordering="class_name")
+    @admin.display(description="班級", ordering="school_class__name")
     def class_name_display(self, obj):
         return obj.class_name or "—"
 

@@ -103,7 +103,6 @@ class CourseDataStore:
                 if not Course.objects.exists():
                     self._seed_sample_courses()
         self._ensure_module_courses()
-        self.ensure_school_classes()
 
     def _seed_sample_courses(self):
         Course.objects.bulk_create([
@@ -159,7 +158,7 @@ class CourseDataStore:
     def get_course(self, course_id: str) -> Optional[Course]:
         self.ensure_seeded()
         try:
-            return Course.objects.get(pk=course_id)
+            return Course.objects.select_related("school_class").get(pk=course_id)
         except Course.DoesNotExist:
             return None
 
@@ -186,16 +185,16 @@ class CourseDataStore:
         if weekday > 0:
             qs = qs.filter(weekday=weekday)
 
-        return list(qs)
+        return list(qs.select_related("school_class"))
 
     def get_user_enrollments(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
         if user_id:
             self.assign_required_courses(user_id)
         courses = list(
-            Course.objects.filter(enrollments__user_id=user_id).order_by(
-                "weekday", "start_period"
-            )
+            Course.objects.filter(enrollments__user_id=user_id)
+            .select_related("school_class")
+            .order_by("weekday", "start_period")
         )
         locked = self.locked_required_ids(user_id) if user_id else set()
         for course in courses:
@@ -214,12 +213,11 @@ class CourseDataStore:
         if not class_name:
             return []
         self.ensure_seeded()
-        matched = []
-        for course in Course.objects.filter(course_type=COURSE_TYPE_REQUIRED):
-            target = (course.target_class or "").strip()
-            if target == class_name or target == "全校":
-                matched.append(course)
-        return matched
+        return list(
+            Course.objects.filter(course_type=COURSE_TYPE_REQUIRED)
+            .filter(Q(opens_to_all=True) | Q(school_class__name=class_name))
+            .select_related("school_class")
+        )
 
     def locked_required_ids(self, user_id: str) -> set:
         class_name = self.student_class_name(user_id)
@@ -228,16 +226,16 @@ class CourseDataStore:
         return {course.course_id for course in self._required_courses(class_name)}
 
     def student_class_name(self, user_id: str) -> str:
-        profile = StudentProfile.objects.filter(pk=user_id).only("class_name").first()
+        profile = (
+            StudentProfile.objects.select_related("school_class").filter(pk=user_id).first()
+        )
         return profile.class_name if profile else ""
 
     def is_required_locked(self, user_id: str, course: Course) -> bool:
         class_name = self.student_class_name(user_id)
-        return bool(
-            class_name
-            and course.course_type == COURSE_TYPE_REQUIRED
-            and (course.target_class or "").strip() in {class_name.strip(), "全校"}
-        )
+        if not class_name or course.course_type != COURSE_TYPE_REQUIRED:
+            return False
+        return course.opens_to_all or course.target_class == class_name
 
     def assign_required_courses(self, user_id: str) -> "RequiredAssignResult":
         """把學生班級與全校的必修加進課表。名額不擋。
@@ -721,22 +719,6 @@ class CourseDataStore:
             "unrecognized_total": unrecognized_total,
         }
 
-    def ensure_school_classes(self) -> None:
-        """課程或學生已經用到的班級名稱，補進班級清單。不會刪掉手動新增的班級。"""
-        names = set()
-        for raw in Course.objects.exclude(target_class="").values_list("target_class", flat=True):
-            name = (raw or "").strip()
-            if name and name != "全校":
-                names.add(name)
-        for raw in StudentProfile.objects.exclude(class_name="").values_list("class_name", flat=True):
-            name = (raw or "").strip()
-            if name and name != "全校":
-                names.add(name)
-        existing = set(SchoolClass.objects.values_list("name", flat=True))
-        missing = [SchoolClass(name=name) for name in sorted(names) if name not in existing]
-        if missing:
-            SchoolClass.objects.bulk_create(missing)
-
     def class_names(self, extra: str = "") -> List[str]:
         """學生可選的班級。來自後台班級清單，不含全校。"""
         self.ensure_seeded()
@@ -749,7 +731,7 @@ class CourseDataStore:
     def is_profile_complete(self, user) -> bool:
         profile = StudentProfile.objects.filter(pk=str(user.pk)).first()
         name = (user.get_full_name() or "").strip()
-        return bool(profile and profile.student_number and profile.class_name and name)
+        return bool(profile and profile.student_number and profile.school_class_id and name)
 
     def save_student_identity(
         self, user, name: str, student_number: str, class_name: str
@@ -762,7 +744,7 @@ class CourseDataStore:
         if not profile.student_number:
             profile.student_number = student_number
         profile.class_name = class_name
-        profile.save(update_fields=["student_number", "class_name"])
+        profile.save(update_fields=["student_number", "school_class"])
         return self.assign_required_courses(str(user.pk))
 
     def get_student_module(self, user_id: str) -> str:

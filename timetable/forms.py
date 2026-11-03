@@ -154,10 +154,11 @@ class StudentProfileAdminForm(forms.ModelForm):
     """後台可更正學號，並把姓名寫回帳號。"""
 
     name = forms.CharField(label="姓名", max_length=30, required=False)
+    class_name = forms.ChoiceField(label="班級", required=False)
 
     class Meta:
         model = StudentProfile
-        fields = "__all__"
+        exclude = ("school_class",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,15 +168,17 @@ class StudentProfileAdminForm(forms.ModelForm):
         if getattr(self.instance, "class_name", ""):
             current = self.instance.class_name
         names = course_store.class_names(extra=current)
-        self.fields["class_name"].widget = forms.Select(
-            choices=[("", "尚未填寫")] + [(name, name) for name in names]
-        )
+        self.fields["class_name"].choices = [("", "尚未填寫")] + [
+            (name, name) for name in names
+        ]
         self.fields["student_number"].required = False
         self.fields["student_number"].help_text = "留白代表尚未填寫。學生填過之後只能在這裡更正。"
         self.fields["class_name"].help_text = (
             "選項來自後台的班級。儲存後會把這個班級與全校的必修加入課表，學生不能自行退選。"
             "改班級只會補上新的必修，不會自動退掉原來的課。"
         )
+        if getattr(self.instance, "pk", None) and not self.is_bound:
+            self.initial["class_name"] = self.instance.class_name
         modules = [("", "尚未選擇")]
         for rule in course_store.module_rules():
             modules.append((rule.module, rule.module))
@@ -210,7 +213,7 @@ class StudentProfileAdminForm(forms.ModelForm):
         value = (self.cleaned_data.get("class_name") or "").strip()
         if not value:
             return ""
-        allowed = {choice for choice, _label in self.fields["class_name"].widget.choices if choice}
+        allowed = {choice for choice, _label in self.fields["class_name"].choices if choice}
         if value not in allowed:
             raise ValidationError("請選擇已建立的班級。")
         return value
@@ -228,6 +231,7 @@ class StudentProfileAdminForm(forms.ModelForm):
         profile = super().save(commit=False)
         if not (profile.student_number or "").strip():
             profile.student_number = None
+        profile.class_name = self.cleaned_data.get("class_name") or ""
         if commit:
             profile.save()
             self.save_m2m()
