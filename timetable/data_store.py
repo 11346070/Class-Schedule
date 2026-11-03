@@ -158,7 +158,7 @@ class CourseDataStore:
     def get_course(self, course_id: str) -> Optional[Course]:
         self.ensure_seeded()
         try:
-            return Course.objects.select_related("school_class", "teacher", "classroom").get(pk=course_id)
+            return Course.objects.select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom").get(pk=course_id)
         except Course.DoesNotExist:
             return None
 
@@ -183,9 +183,9 @@ class CourseDataStore:
             qs = qs.filter(course_type=course_type)
 
         if weekday > 0:
-            qs = qs.filter(weekday=weekday)
+            qs = qs.filter(Q(weekday=weekday) | Q(extra_meetings__weekday=weekday)).distinct()
 
-        return list(qs.select_related("school_class", "teacher", "classroom"))
+        return list(qs.select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom"))
 
     def get_user_enrollments(self, user_id: str) -> List[Course]:
         self.ensure_seeded()
@@ -193,7 +193,7 @@ class CourseDataStore:
             self.assign_required_courses(user_id)
         courses = list(
             Course.objects.filter(enrollments__user_id=user_id)
-            .select_related("school_class", "teacher", "classroom")
+            .select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom")
             .order_by("weekday", "start_period")
         )
         locked = self.locked_required_ids(user_id) if user_id else set()
@@ -216,7 +216,7 @@ class CourseDataStore:
         return list(
             Course.objects.filter(course_type=COURSE_TYPE_REQUIRED)
             .filter(Q(opens_to_all=True) | Q(school_class__name=class_name))
-            .select_related("school_class", "teacher", "classroom")
+            .select_related("school_class", "teacher", "classroom").prefetch_related("extra_meetings__classroom")
         )
 
     def locked_required_ids(self, user_id: str) -> set:
@@ -297,12 +297,7 @@ class CourseDataStore:
         locked = [course for course in courses if getattr(course, "required_locked", False)]
         for index, course in enumerate(locked):
             for other in locked[index + 1:]:
-                if course.weekday != other.weekday or not self._periods_overlap(
-                    course.start_period,
-                    course.end_period,
-                    other.start_period,
-                    other.end_period,
-                ):
+                if not course.overlaps_course(other):
                     continue
                 key = tuple(sorted((course.course_id, other.course_id)))
                 if key in seen:
@@ -315,16 +310,13 @@ class CourseDataStore:
 
     def _overlapping_enrolled(self, user_id: str, course: Course) -> List[Course]:
         overlaps = []
-        enrolled = Course.objects.filter(enrollments__user_id=user_id).exclude(pk=course.pk)
+        enrolled = (
+            Course.objects.filter(enrollments__user_id=user_id)
+            .exclude(pk=course.pk)
+            .prefetch_related("extra_meetings__classroom")
+        )
         for existing in enrolled:
-            if existing.weekday != course.weekday:
-                continue
-            if self._periods_overlap(
-                existing.start_period,
-                existing.end_period,
-                course.start_period,
-                course.end_period,
-            ):
+            if course.overlaps_course(existing):
                 overlaps.append(existing)
         return overlaps
 
@@ -441,18 +433,12 @@ class CourseDataStore:
         if course.is_full:
             return False, f"課程已額滿（{course.total_quota}/{course.total_quota}）"
         for existing in enrolled:
-            if existing.weekday != course.weekday:
+            if not course.overlaps_course(existing):
                 continue
-            if self._periods_overlap(
-                existing.start_period,
-                existing.end_period,
-                course.start_period,
-                course.end_period,
-            ):
-                return (
-                    False,
-                    f"時間衝突：與「{existing.name}」（{existing.get_time_display()}）衝堂",
-                )
+            return (
+                False,
+                f"時間衝突：與「{existing.name}」（{existing.get_time_display()}）衝堂",
+            )
         rule = rules.get(course.module)
         if rule is not None and rule.max_credits:
             current = module_totals.get(course.module, 0)
@@ -635,14 +621,7 @@ class CourseDataStore:
         enrolled_courses = self.get_user_enrollments(user_id)
 
         for existing_course in enrolled_courses:
-            if existing_course.weekday != new_course.weekday:
-                continue
-            if self._periods_overlap(
-                existing_course.start_period,
-                existing_course.end_period,
-                new_course.start_period,
-                new_course.end_period,
-            ):
+            if new_course.overlaps_course(existing_course):
                 return existing_course
         return None
 
@@ -1021,9 +1000,11 @@ class CourseDataStore:
         enrolled_courses = self.get_user_enrollments(user_id)
         free_periods = {weekday: list(range(1, 14)) for weekday in range(1, 8)}
         for course in enrolled_courses:
-            for period in range(course.start_period, course.end_period + 1):
-                if period in free_periods[course.weekday]:
-                    free_periods[course.weekday].remove(period)
+            for slot in course.time_slots():
+                for period in range(slot["start_period"], slot["end_period"] + 1):
+                    day = free_periods[slot["weekday"]]
+                    if period in day:
+                        day.remove(period)
         return free_periods
 
 

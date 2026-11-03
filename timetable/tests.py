@@ -616,6 +616,22 @@ class SafetyRegressionTests(TestCase):
 
 
 class AdminIdentityTests(TestCase):
+    def setUp(self):
+        original = self.client.post
+
+        def post(path, data=None, *args, **kwargs):
+            if isinstance(data, dict) and "/admin/timetable/course/" in path:
+                data = {
+                    "extra_meetings-TOTAL_FORMS": "0",
+                    "extra_meetings-INITIAL_FORMS": "0",
+                    "extra_meetings-MIN_NUM_FORMS": "0",
+                    "extra_meetings-MAX_NUM_FORMS": "1000",
+                    **data,
+                }
+            return original(path, data, *args, **kwargs)
+
+        self.client.post = post
+
     def test_staff_can_identify_users_and_students_cannot_enter_admin(self):
         student = User.objects.create_user(
             username="student2",
@@ -1005,6 +1021,30 @@ class AdminIdentityTests(TestCase):
         self.client.force_login(student)
         detail = self.client.get(reverse("course_detail", args=["CS101"]))
         self.assertContains(detail, "資工館301")
+
+    def test_extra_meeting_is_shown_and_blocks_a_conflicting_enrollment(self):
+        from timetable.models import CourseMeeting
+
+        course_store.ensure_seeded()
+        student = User.objects.create_user(username="slot-student", password="Old-password-1")
+        user_id = str(student.pk)
+        enrolled, message = course_store.enroll_course(user_id, "CS101")
+        self.assertTrue(enrolled, message)
+        meeting = CourseMeeting(
+            course_id="CS301",
+            weekday=1,
+            start_period=3,
+            end_period=4,
+        )
+        meeting.full_clean()
+        meeting.save()
+        blocked, message = course_store.enroll_course(user_id, "CS301")
+        self.assertFalse(blocked)
+        self.assertIn("衝堂", message)
+        self.client.force_login(student)
+        detail = self.client.get(reverse("course_detail", args=["CS301"]))
+        self.assertContains(detail, "週一 第3-4節")
+        self.assertContains(detail, "週二 第6-8節")
 
 
 class StudyRecordSyncTests(TestCase):

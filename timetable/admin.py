@@ -15,6 +15,7 @@ from .data_store import course_store
 from .forms import StudentProfileAdminForm
 from .models import (
     Course,
+    CourseMeeting,
     CourseReview,
     Enrollment,
     Favorite,
@@ -288,9 +289,18 @@ class CourseAdminForm(forms.ModelForm):
         return uploaded
 
 
+class CourseMeetingInline(admin.TabularInline):
+    model = CourseMeeting
+    extra = 0
+    fields = ("weekday", "start_period", "end_period", "classroom")
+    verbose_name = "其他上課時段"
+    verbose_name_plural = "其他上課時段"
+
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseAdminForm
+    inlines = (CourseMeetingInline,)
     list_display = (
         "course_id",
         "name",
@@ -328,23 +338,29 @@ class CourseAdmin(admin.ModelAdmin):
             return ("course_id", "enrolled_count")
         return ("enrolled_count",)
 
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        obj = form.instance
+        if not obj.teacher_id:
+            return
+        overlaps = []
+        others = (
+            Course.objects.filter(teacher_id=obj.teacher_id)
+            .exclude(pk=obj.pk)
+            .prefetch_related("extra_meetings")
+        )
+        for other in others:
+            if obj.overlaps_course(other):
+                overlaps.append(f"{other.course_id} {other.name}")
+        if overlaps:
+            self.message_user(
+                request,
+                "這位老師在同一時段還有其他課程：" + "、".join(overlaps) + "。",
+                messages.WARNING,
+            )
+
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        if obj.teacher_id:
-            overlaps = []
-            others = Course.objects.filter(teacher_id=obj.teacher_id).exclude(pk=obj.pk)
-            for other in others:
-                if other.weekday != obj.weekday:
-                    continue
-                if other.end_period < obj.start_period or obj.end_period < other.start_period:
-                    continue
-                overlaps.append(f"{other.course_id} {other.name}")
-            if overlaps:
-                self.message_user(
-                    request,
-                    "這位老師在同一時段還有其他課程：" + "、".join(overlaps) + "。",
-                    messages.WARNING,
-                )
         if (obj.course_type or "").strip() != "必修":
             return
         if not obj.opens_to_all and not obj.school_class_id:

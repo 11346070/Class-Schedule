@@ -2,6 +2,8 @@
 Views - 處理所有網頁請求與選課操作
 """
 
+import copy
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.contrib.auth import login, logout, update_session_auth_hash
@@ -180,8 +182,28 @@ def _periods_overlap(start1, end1, start2, end2):
     return not (end1 < start2 or end2 < start1)
 
 
+def _schedule_blocks(enrolled_courses):
+    """一門課有多個時段時，每個時段各佔一格。"""
+    blocks = []
+    for course in enrolled_courses:
+        slots = course.time_slots()
+        if len(slots) == 1:
+            blocks.append(course)
+            continue
+        for slot in slots:
+            block = copy.copy(course)
+            block.weekday = slot["weekday"]
+            block.start_period = slot["start_period"]
+            block.end_period = slot["end_period"]
+            if slot["classroom"] is not None:
+                block.classroom = slot["classroom"]
+            blocks.append(block)
+    return blocks
+
+
 def build_weekly_schedule(enrolled_courses):
     """同一格有多門課時並排，避免後加的必修被蓋掉。"""
+    enrolled_courses = _schedule_blocks(enrolled_courses)
     by_day = {}
     for course in enrolled_courses:
         by_day.setdefault(course.weekday, []).append(course)
@@ -211,7 +233,7 @@ def build_weekly_schedule(enrolled_courses):
                     other.end_period,
                 ):
                     count = max(count, lane + 1, other_lane + 1)
-            placement[course.course_id] = (lane, count)
+            placement[(course.course_id, course.weekday, course.start_period)] = (lane, count)
 
     weekly_schedule = []
     for period in range(1, 14):
@@ -227,7 +249,7 @@ def build_weekly_schedule(enrolled_courses):
                 if course.weekday != weekday:
                     continue
                 if course.start_period == period:
-                    lane, count = placement[course.course_id]
+                    lane, count = placement[(course.course_id, course.weekday, course.start_period)]
                     items.append({
                         "course": course,
                         "rowspan": course.end_period - course.start_period + 1,
@@ -295,15 +317,16 @@ def index(request):
                     'course_id': course.course_id,
                     'name': course.name,
                     'teacher': course.teacher.name if course.teacher_id else "",
-                    'weekday': course.weekday,
-                    'start_period': course.start_period,
-                    'end_period': course.end_period,
+                    'weekday': slot['weekday'],
+                    'start_period': slot['start_period'],
+                    'end_period': slot['end_period'],
                     'credits': course.credits,
                     'course_type': course.course_type,
                     'target_class': course.target_class,
-                    'classroom': course.classroom.name if course.classroom_id else "",
+                    'classroom': slot['classroom'].name if slot['classroom'] else "",
                 }
                 for course in enrolled_courses
+                for slot in course.time_slots()
             ],
         },
     }
@@ -547,13 +570,9 @@ def course_detail(request, course_id):
     if authenticated and not is_enrolled:
         enrolled_courses = course_store.get_user_enrollments(user_id)
         for existing_course in enrolled_courses:
-            if existing_course.weekday == course.weekday:
-                if course_store._periods_overlap(
-                    existing_course.start_period, existing_course.end_period,
-                    course.start_period, course.end_period
-                ):
-                    conflict_course = existing_course
-                    break
+            if course.overlaps_course(existing_course):
+                conflict_course = existing_course
+                break
 
     if not authenticated:
         can_enroll, enroll_message = False, "請先登入後再選課"

@@ -263,8 +263,43 @@ class Course(models.Model):
     def get_weekday_name(self) -> str:
         return WEEKDAY_NAMES.get(self.weekday, "未知")
 
+    def time_slots(self) -> list:
+        """第一個時段存在課程上，其餘時段在其他上課時段。"""
+        slots = [{
+            "weekday": self.weekday,
+            "start_period": self.start_period,
+            "end_period": self.end_period,
+            "classroom": self.classroom if self.classroom_id else None,
+        }]
+        for meeting in self.extra_meetings.all():
+            slots.append({
+                "weekday": meeting.weekday,
+                "start_period": meeting.start_period,
+                "end_period": meeting.end_period,
+                "classroom": meeting.classroom if meeting.classroom_id else None,
+            })
+        slots.sort(key=lambda slot: (slot["weekday"], slot["start_period"]))
+        return slots
+
+    def overlaps_course(self, other) -> bool:
+        if other is None or self.pk == other.pk:
+            return False
+        for left in self.time_slots():
+            for right in other.time_slots():
+                if left["weekday"] != right["weekday"]:
+                    continue
+                if left["end_period"] < right["start_period"] or right["end_period"] < left["start_period"]:
+                    continue
+                return True
+        return False
+
     def get_time_display(self) -> str:
-        return f"{self.get_weekday_name()} 第{self.start_period}-{self.end_period}節"
+        parts = []
+        for slot in self.time_slots():
+            parts.append(
+                f"{WEEKDAY_NAMES.get(slot['weekday'], '未知')} 第{slot['start_period']}-{slot['end_period']}節"
+            )
+        return "、".join(parts)
 
     def to_dict(self) -> dict:
         return {
@@ -286,6 +321,69 @@ class Course(models.Model):
             "remaining_quota": self.remaining_quota,
             "is_full": self.is_full,
         }
+
+
+class CourseMeeting(models.Model):
+    """課程第一個時段以外的上課時間。教室可以和第一個時段不同。"""
+    course = models.ForeignKey(
+        Course,
+        verbose_name="課程",
+        on_delete=models.CASCADE,
+        related_name="extra_meetings",
+    )
+    weekday = models.PositiveSmallIntegerField("星期")
+    start_period = models.PositiveSmallIntegerField("開始節次")
+    end_period = models.PositiveSmallIntegerField("結束節次")
+    classroom = models.ForeignKey(
+        Classroom,
+        verbose_name="教室",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="extra_meetings",
+    )
+
+    class Meta:
+        ordering = ["weekday", "start_period"]
+        verbose_name = "其他上課時段"
+        verbose_name_plural = "其他上課時段"
+
+    def __str__(self):
+        return f"{self.course_id} {WEEKDAY_NAMES.get(self.weekday, '未知')} 第{self.start_period}-{self.end_period}節"
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if self.weekday is not None and self.weekday not in WEEKDAY_NAMES:
+            errors["weekday"] = "星期必須介於 1（週一）到 7（週日）。"
+        for field_name in ("start_period", "end_period"):
+            value = getattr(self, field_name)
+            if value is not None and not (MIN_PERIOD <= value <= MAX_PERIOD):
+                errors[field_name] = f"節次必須介於 {MIN_PERIOD} 到 {MAX_PERIOD}。"
+        if (
+            self.start_period is not None
+            and self.end_period is not None
+            and self.start_period > self.end_period
+            and "start_period" not in errors
+            and "end_period" not in errors
+        ):
+            errors["end_period"] = "結束節次不可早於開始節次。"
+        if errors:
+            raise ValidationError(errors)
+        if not self.course_id:
+            return
+        slots = []
+        course = self.course
+        slots.append((course.weekday, course.start_period, course.end_period))
+        siblings = course.extra_meetings.exclude(pk=self.pk) if self.pk else course.extra_meetings.all()
+        for other in siblings:
+            slots.append((other.weekday, other.start_period, other.end_period))
+        for weekday, start, end in slots:
+            if weekday != self.weekday:
+                continue
+            if self.end_period < start or end < self.start_period:
+                continue
+            raise ValidationError("這個時段和這門課的其他上課時間重疊。")
 
 
 class Enrollment(models.Model):
