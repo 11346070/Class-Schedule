@@ -2,15 +2,27 @@
 課程與選課相關資料模型（SQLite）
 """
 
+import re
 from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.db import models
 
+COURSE_TYPE_REQUIRED = "必修"
+COURSE_TYPE_ELECTIVE = "選修"
+COURSE_TYPE_GENERAL = "通識"
+COURSE_TYPE_CHOICES = [
+    (COURSE_TYPE_REQUIRED, "必修"),
+    (COURSE_TYPE_ELECTIVE, "選修"),
+    (COURSE_TYPE_GENERAL, "通識"),
+]
+COURSE_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]+")
+
 
 def syllabus_upload_to(instance, filename):
     """檔名只用課程編號，避免沿用上傳路徑。"""
-    return f"syllabi/{instance.course_id}.pdf"
+    safe_id = COURSE_ID_PATTERN.fullmatch(instance.course_id or "")
+    return f"syllabi/{safe_id.group(0) if safe_id else 'course'}.pdf"
 
 
 def avatar_upload_to(instance, filename):
@@ -48,7 +60,12 @@ class Course(models.Model):
     start_period = models.PositiveSmallIntegerField("開始節次")
     end_period = models.PositiveSmallIntegerField("結束節次")
     credits = models.PositiveSmallIntegerField("學分")
-    course_type = models.CharField("課程類型", max_length=20)  # 必修、選修、通識
+    course_type = models.CharField(
+        "課程類型",
+        max_length=20,
+        choices=COURSE_TYPE_CHOICES,
+        help_text="選「必修」後，開課班級相同的學生會自動加入這門課，而且不能退選。",
+    )
     module = models.CharField("所屬模組", max_length=20, blank=True, default="")
     syllabus = models.FileField("課程大綱 PDF", upload_to=syllabus_upload_to, blank=True)
     target_class = models.CharField("開課班級", max_length=50)
@@ -73,6 +90,15 @@ class Course(models.Model):
         """後台維護課程時，檢查星期、節次、學分與名額是否合理。"""
         super().clean()
         errors = {}
+        self.course_type = (self.course_type or "").strip()
+        self.target_class = (self.target_class or "").strip()
+        self.course_id = (self.course_id or "").strip()
+
+        if self.course_id and COURSE_ID_PATTERN.fullmatch(self.course_id) is None:
+            errors["course_id"] = "課程編號只能使用英數、底線或連字號。"
+
+        if self.course_type and self.course_type not in dict(COURSE_TYPE_CHOICES):
+            errors["course_type"] = "課程類型必須是必修、選修或通識。"
 
         if self.weekday is not None and self.weekday not in WEEKDAY_NAMES:
             errors["weekday"] = "星期必須介於 1（週一）到 7（週日）。"
@@ -107,6 +133,13 @@ class Course(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.course_type = (self.course_type or "").strip()
+        self.target_class = (self.target_class or "").strip()
+        if self.course_id:
+            self.course_id = self.course_id.strip()
+        super().save(*args, **kwargs)
 
     def get_weekday_name(self) -> str:
         return WEEKDAY_NAMES.get(self.weekday, "未知")
@@ -272,6 +305,7 @@ class StudentProfile(models.Model):
     def save(self, *args, **kwargs):
         number = (self.student_number or "").strip().upper()
         self.student_number = number or None
+        self.class_name = (self.class_name or "").strip()
         super().save(*args, **kwargs)
 
 

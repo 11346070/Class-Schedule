@@ -14,6 +14,7 @@ from django.db.models import Q
 from .models import (
     MODULE_FINANCE,
     MODULE_INFO,
+    COURSE_TYPE_REQUIRED,
     Course,
     CourseReview,
     Enrollment,
@@ -198,26 +199,22 @@ class CourseDataStore:
         ).exists()
 
     def _required_courses(self, class_name: str) -> List[Course]:
+        class_name = (class_name or "").strip()
         if not class_name:
             return []
         self.ensure_seeded()
-        return list(
-            Course.objects.filter(
-                course_type="必修",
-                target_class__in=[class_name, "全校"],
-            )
-        )
+        matched = []
+        for course in Course.objects.filter(course_type=COURSE_TYPE_REQUIRED):
+            target = (course.target_class or "").strip()
+            if target == class_name or target == "全校":
+                matched.append(course)
+        return matched
 
     def locked_required_ids(self, user_id: str) -> set:
         class_name = self.student_class_name(user_id)
         if not class_name:
             return set()
-        return set(
-            Course.objects.filter(
-                course_type="必修",
-                target_class__in=[class_name, "全校"],
-            ).values_list("course_id", flat=True)
-        )
+        return {course.course_id for course in self._required_courses(class_name)}
 
     def student_class_name(self, user_id: str) -> str:
         profile = StudentProfile.objects.filter(pk=user_id).only("class_name").first()
@@ -227,8 +224,8 @@ class CourseDataStore:
         class_name = self.student_class_name(user_id)
         return bool(
             class_name
-            and course.course_type == "必修"
-            and course.target_class in {class_name, "全校"}
+            and course.course_type == COURSE_TYPE_REQUIRED
+            and (course.target_class or "").strip() in {class_name.strip(), "全校"}
         )
 
     def assign_required_courses(self, user_id: str) -> List[str]:

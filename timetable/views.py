@@ -543,10 +543,11 @@ def course_syllabus(request, course_id):
     except FileNotFoundError:
         raise Http404
     download = request.GET.get("download") == "1"
-    response = FileResponse(handle, content_type="application/pdf")
-    disposition = "attachment" if download else "inline"
-    response["Content-Disposition"] = (
-        f'{disposition}; filename="{course.course_id}-syllabus.pdf"'
+    response = FileResponse(
+        handle,
+        content_type="application/pdf",
+        as_attachment=download,
+        filename=f"{course.course_id}-syllabus.pdf",
     )
     return response
 

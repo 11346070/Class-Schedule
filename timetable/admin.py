@@ -171,14 +171,14 @@ class CourseAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        if obj.course_type != "必修" or not obj.target_class:
+        target = (obj.target_class or "").strip()
+        if (obj.course_type or "").strip() != "必修" or not target:
             return
-        if obj.target_class == "全校":
-            user_ids = StudentProfile.objects.exclude(class_name="").values_list("user_id", flat=True)
-        else:
-            user_ids = StudentProfile.objects.filter(class_name=obj.target_class).values_list(
-                "user_id", flat=True
-            )
+        user_ids = [
+            profile.user_id
+            for profile in StudentProfile.objects.exclude(class_name="")
+            if target == "全校" or (profile.class_name or "").strip() == target
+        ]
         added_students = 0
         for user_id in user_ids:
             if course_store.assign_required_courses(user_id):

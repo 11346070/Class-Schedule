@@ -698,6 +698,50 @@ class AdminIdentityTests(TestCase):
         roster = self.client.get("/admin/timetable/enrollment/")
         self.assertContains(roster, "學生不可退選")
 
+    def test_new_required_course_is_added_to_that_class(self):
+        student = User.objects.create_user(username="class-student", password="Old-password-1")
+        StudentProfile.objects.create(
+            user_id=str(student.pk),
+            class_name="資工一",
+            student_number="A11111",
+        )
+        staff = User.objects.create_superuser("course-boss", "course-boss@example.com", "Old-password-1")
+        self.client.force_login(staff)
+        created = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "CS109",
+            "name": "計算機組織",
+            "teacher": "新教授",
+            "course_type": "必修",
+            "module": "",
+            "target_class": "資工一",
+            "weekday": "3",
+            "start_period": "2",
+            "end_period": "4",
+            "credits": "3",
+            "total_quota": "40",
+        })
+        self.assertEqual(created.status_code, 302, created.content.decode()[:500] if created.status_code != 302 else "")
+        self.assertTrue(
+            Enrollment.objects.filter(user_id=str(student.pk), course_id="CS109").exists()
+        )
+        rejected = self.client.post("/admin/timetable/course/add/", {
+            "course_id": "../secret",
+            "name": "不該建立",
+            "teacher": "新教授",
+            "course_type": "123",
+            "module": "",
+            "target_class": "資工一",
+            "weekday": "1",
+            "start_period": "2",
+            "end_period": "3",
+            "credits": "2",
+            "total_quota": "20",
+        })
+        self.assertEqual(rejected.status_code, 200)
+        self.assertContains(rejected, "課程編號只能使用英數")
+        self.assertContains(rejected, "id_course_type_error")
+        self.assertFalse(Enrollment.objects.filter(course_id="../secret").exists())
+
 
 class StudyRecordSyncTests(TestCase):
     def test_admin_can_mark_a_record_passed_and_the_progress_page_follows(self):
