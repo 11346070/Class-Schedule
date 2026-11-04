@@ -986,14 +986,15 @@ body {
     table-layout: fixed;
 }
 
-.course-table.course-list-table th:nth-child(1) { width: 11%; }
-.course-table.course-list-table th:nth-child(2) { width: 18%; }
-.course-table.course-list-table th:nth-child(3) { width: 12%; }
-.course-table.course-list-table th:nth-child(4) { width: 13%; }
-.course-table.course-list-table th:nth-child(5) { width: 7%; }
-.course-table.course-list-table th:nth-child(6) { width: 8%; }
-.course-table.course-list-table th:nth-child(7) { width: 8%; }
-.course-table.course-list-table th:nth-child(8) { width: 23%; }
+.course-table.course-list-table th:nth-child(1) { width: 8%; }
+.course-table.course-list-table th:nth-child(2) { width: 15%; }
+.course-table.course-list-table th:nth-child(3) { width: 10%; }
+.course-table.course-list-table th:nth-child(4) { width: 14%; }
+.course-table.course-list-table th:nth-child(5) { width: 10%; }
+.course-table.course-list-table th:nth-child(6) { width: 5%; }
+.course-table.course-list-table th:nth-child(7) { width: 7%; }
+.course-table.course-list-table th:nth-child(8) { width: 7%; }
+.course-table.course-list-table th:nth-child(9) { width: 24%; }
 
 .course-table.course-list-table thead th:nth-child(1),
 .course-table.course-list-table thead th:nth-child(5) {
@@ -1011,13 +1012,23 @@ body {
 .course-table.course-list-table td {
     text-align: left;
     white-space: normal;
+    word-break: keep-all;
     vertical-align: middle;
+    padding: 0.75rem 0.4rem;
+}
+
+.course-table.course-list-table td[data-label="時間"],
+.course-table.course-list-table td[data-label="教室"],
+.course-table.course-list-table td[data-label="學分"],
+.course-table.course-list-table td[data-label="名額"],
+.course-table.course-list-table .course-type-badge {
+    white-space: nowrap;
 }
 
 .course-table.course-list-table .col-actions {
-    width: 23%;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    width: 24%;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
 }
 
 .course-status-block {
@@ -1044,9 +1055,9 @@ body {
 .course-actions {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     max-width: 100%;
 }
 
