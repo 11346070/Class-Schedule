@@ -93,18 +93,34 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 3. 設定環境變數並建立資料庫
+### 3. 套用資料庫
+
+專案已附上寫好展示資料的 `db.sqlite3`。下載後執行 migrate 只會補上尚未套用的結構，不會清掉課程、帳號與選課紀錄。
 
 ```bash
 copy .env.example .env
 python manage.py migrate
 ```
 
-### 4. 建立管理員帳號並啟動系統
+沒有 `.env` 也能啟動。設定檔已有本機用的預設值。
+
+### 4. 啟動系統
 
 ```bash
-python manage.py createsuperuser
 python manage.py runserver 127.0.0.1:8000
+```
+
+展示帳號如下，兩組密碼相同。
+
+| 用途 | 帳號 | 密碼 | 登入後 |
+| --- | --- | --- | --- |
+| 學生前台 | `demo` | `ClassDemo2026` | 已有課表、收藏、評價與歷年成績 |
+| 管理後台 | `admin` | `ClassDemo2026` | http://127.0.0.1:8000/admin/ |
+
+若展示資料被改亂，可還原成同一套結果：
+
+```bash
+python manage.py seed_demo
 ```
 
 ## 系統網址
@@ -115,8 +131,10 @@ python manage.py runserver 127.0.0.1:8000
 ## 注意事項
 
 - 本專案以本機執行為主，供課堂展示與測試使用。
-- `db.sqlite3`、`.env`、`.venv/` 與 `media/`（頭貼、課程大綱）不納入版本控制。
-- 首次執行且資料庫無課程時，系統會載入示範課程，並補上資訊、金融模組的示範課。
+- `db.sqlite3` 與 `media/syllabi/`（展示用課程大綱）納入版本控制，下載後不用再自行建課或註冊。`.env`、`.venv/` 與 `media/avatars/`（頭貼）不納入。
+- 資料庫是 SQLite 單一檔案，可以直接放上 GitHub。展示庫遠小於 GitHub 的 100MB 限制；登入狀態存在同一份資料庫，不依賴本機的 sessions 資料夾。密碼雜湊已寫在資料庫裡，與 `.env` 的 SECRET_KEY 無關。
+- 這份資料庫給課堂展示使用，帳號與密碼寫在上面。請不要放真實個資。
+- 首次執行且資料庫無課程時，系統會載入示範課程，並補上資訊、金融模組的示範課。要連帳號與選課結果一起還原，請改執行 `python manage.py seed_demo`。
 - 新帳號預設學分上限為 25、退選下限為 9。
 - 畢業門檻預設總學分 128（必修 60、選修 40、通識 28），模組認列上限為 9。
 - 模組學分上下限預設為 0，表示不額外限制。以上設定皆可由後台調整，前台重新整理後即會更新。

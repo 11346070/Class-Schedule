@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>個人課表維護系統｜展示操作說明</title>
+<style>
+  @page { size: A4; margin: 12mm 13mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: #1e293b;
+    font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+  h1 { font-size: 18pt; line-height: 1.25; margin: 0 0 2px; }
+  h2 {
+    font-size: 12.5pt;
+    margin: 11px 0 4px;
+    break-after: avoid;
+  }
+  p { margin: 0 0 6px; }
+  .kicker { color: #1d4ed8; font-size: 10pt; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  th, td { border: 1px solid #e2e8f0; padding: 4px 7px; text-align: left; vertical-align: top; }
+  th { background: #eff6ff; color: #1e3a8a; font-weight: 700; }
+  tr { break-inside: avoid; }
+  code { font-family: Consolas, "Microsoft JhengHei", monospace; font-size: 10pt; }
+  .note {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin: 6px 0 8px;
+  }
+  ol { margin: 4px 0 6px; padding-left: 1.3em; }
+  li { margin: 2px 0; }
+  .step { break-inside: avoid; }
+</style>
+</head>
+<body>
+  <p class="kicker">課堂展示用 · 約 10 分鐘</p>
+  <h1>個人課表維護系統｜操作說明</h1>
+  <p>下載專案並啟動後，用下面的帳號即可看到選課結果。不用註冊，也不用先到後台建課。</p>
+
+  <table>
+    <tr><th>項目</th><th>內容</th></tr>
+    <tr><td>前台</td><td><code>http://127.0.0.1:8000</code></td></tr>
+    <tr><td>後台</td><td><code>http://127.0.0.1:8000/admin/</code></td></tr>
+    <tr><td>學生</td><td>帳號 <code>demo</code>，密碼 <code>ClassDemo2026</code>（陳同學／學號 11346001／資工一／主修資訊）</td></tr>
+    <tr><td>管理員</td><td>帳號 <code>admin</code>，密碼 <code>ClassDemo2026</code></td></tr>
+  </table>
+  <p class="note">啟動：<code>python manage.py migrate</code> 之後執行 <code>python manage.py runserver 127.0.0.1:8000</code>。資料庫已附在專案裡。若展示時改動了選課或成績，執行 <code>python manage.py seed_demo</code> 可還原。</p>
+
+  <div class="step">
+    <h2>1. 課表總覽（約 2 分鐘）</h2>
+    <ol>
+      <li>以 <code>demo</code> 登入，進入首頁。</li>
+      <li>看本週課表：已選 10 門、22 學分，上限 25、退選下限 20。狀態會顯示「接近退選下限」。</li>
+      <li>週一「程式設計(一)」與「程式設計實驗」並排，下方提醒兩門必修時間重疊、學生不能自行退選。</li>
+      <li>「計算機概論」出現兩個時段：週三第 6–8 節（資訊館 201）與週一第 11–12 節（資訊館 電腦教室）。</li>
+      <li>按「匯出課表」，可匯出目前這位學生的 PDF 或 PNG。</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <h2>2. 選課規則（約 2 分鐘）</h2>
+    <p>到「課程清單」。課程名稱下方有最多人的作業量與考試難度，例如「程式設計(一)」是作業多、考試適中。可用關鍵字、類型、星期與「僅顯示尚有名額」篩選。</p>
+    <table>
+      <tr><th>打開這門課</th><th>會看到的結果</th></tr>
+      <tr><td>資訊安全 INF210</td><td>不能選。資訊模組目前 6 學分，再選會到 9，超過上限 6。</td></tr>
+      <tr><td>中國文學欣賞 GE101</td><td>不能選。與「程式設計(一)」衝堂。</td></tr>
+      <tr><td>進階專題研究 TEST01</td><td>不能選。名額 2/2，已額滿。</td></tr>
+      <tr><td>金融市場 FIN201</td><td>按鈕是「選修此課程」，代表現在可以選，選完剛好 25 學分。示範時可不按，避免改到預設資料。</td></tr>
+      <tr><td>專題先修 CS199</td><td>不能選。這是 113-2 的課，不是目前學期。修課進度把學期選成 113-2，點課程名稱即可進來。</td></tr>
+    </table>
+  </div>
+
+  <div class="step">
+    <h2>3. 收藏、大綱與評價（約 2 分鐘）</h2>
+    <ol>
+      <li>打開「收藏清單」。已收藏上面四種情況：金融市場可選，其餘三門按鈕是停用的。點「詳情」會看到不能選的原因。</li>
+      <li>打開「程式設計(一)」或「人工智慧」，課程大綱可檢視、下載 PDF。打開「環境科學」則顯示「尚未上傳」。</li>
+      <li>「人工智慧」下方已有這位學生的評價，按鈕是「更新評價」。清單上的文字是大家投票後最多的結果。</li>
+      <li>回到首頁，對「人工智慧」按退選。系統會拒絕：退完剩 19 學分，低於下限 20，必須請管理員處理。必修課程的按鈕則是「不可退選」。</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <h2>4. 修課進度（約 2 分鐘）</h2>
+    <ol>
+      <li>打開「修課進度」。已取得 34／128。必修 16（正在修 12）、選修 8（正在修 8）、通識 10（正在修 2）。正在修與未通過都不計入已取得。</li>
+      <li>主修資訊會顯示已通過 3、正在修 6、下限 3、上限 6，並註明不認列 3 學分。這 3 學分是「網頁前端」，在歷年紀錄把狀態選成「已過但不認列」就能看到。選「未通過」則會看到普通物理。</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <h2>5. 後台（約 2 分鐘）</h2>
+    <ol>
+      <li>登出後以 <code>admin</code> 進入後台。</li>
+      <li>課表管理 → 歷年修課紀錄，搜尋「陳同學」。勾選「環境科學」，動作選「標為已通過」。回到前台重新整理，通識已取得會從 10 變成 12。</li>
+      <li>課表管理 → 課程，打開「程式設計(一)」按儲存。會出現警告：王教授在同一時段還有「程式設計實驗」。課程仍會保留。</li>
+      <li>學生資料裡可看到學號、班級與主修模組。學號學生自己不能改，管理員可以更正。</li>
+    </ol>
+  </div>
+</body>
+</html>
